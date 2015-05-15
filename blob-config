@@ -214,7 +214,7 @@ conkyRunning(){    # find running conkys
 }
 
 writeConkys(){  # save conky names to saved-themes.txt
-    TXT="\nConkys:\n\n"
+    TXT="Conkys:\n\n"
     while read line;do
         TXT="$TXT$line\n"
     done < "$TEMP3"
@@ -264,7 +264,7 @@ tintRunning(){
 }
 
 writeTint2s(){  # save tint2 names to saved-themes.txt
-    TXT="\nTint2s:\n\n"
+    TXT="Tint2s:\n\n"
     while read line;do
         TXT="$TXT$line\n"
     done < "$TEMP3"
@@ -403,7 +403,7 @@ saveSettings(){
     
     CHOICE=$(zenity --list --checklist --title "$TITLE" \
     --text "Choose the configs you want to save..." \
-    --width=300 --height=270 \
+    --width=340 --height=270 \
     --column "Select" --column "Config" --separator=":" "${COLUMNS[@]}")
     
     if [[ $? = 1 ]]; then # cancel button pressed
