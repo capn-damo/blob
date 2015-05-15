@@ -1,6 +1,6 @@
 # blob
 #
-# "blOB" - a BunsenLabs Openbox Configuration Mnanager
+# "blOB" - a BunsenLabs Openbox Configuration Manager
 #
 # blob-config : a bash script to save or restore Openbox gui configurations
 #
