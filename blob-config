@@ -24,7 +24,6 @@ CONFIGDIR=""
 SCROT=0
 CZEN=0
 TZEN=0
-DASHES="------------------------------------------------------------------------"
 ### CONFIGS VARIABLES
 FEHFILE="$HOME/.fehbg"
 NITRODIR="$HOME/.config/nitrogen"
@@ -35,11 +34,12 @@ TINTSESSION="$HOME/.config/tint2/tint2-sessionfile"
 GTK2=".gtkrc-2.0"
 GTK2MINE=".gtkrc-2.0.mine"
 GTK3="$HOME/.config/gtk-3.0"
-GTK3x="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml"
+GTK3x="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-notifyd.xml"
 ### END CONFIGS VARIABLES
 
 ### DIALOG VARIABLES
 TITLE="blOB Configuration Manager"
+DASHES="------------------------------------------------------------------------"
 PICKOBCFGS="OB menu.xml rc.xml autostart"
 PICKOB="OB theme"
 PICKGTK="GTK theme"
@@ -125,7 +125,7 @@ getBg(){    # find if feh or nitrogen was used. Save config file(s)
         None    )   echo "No background-setting application found" 2>&1
                     echo "[BACKGROUND] $BGSET" >> "$SETTINGS"
                     ;;
-        *       )   echo "ERROR"
+        *       )   echo "ERROR: No background config found" 2>&1
                     exit 1
                     ;;
     esac
@@ -139,7 +139,7 @@ bgFeh(){    # get Feh saved backgrounds
         for F in $(grep -o "'.*'" $FFILE | sed "s/'//g");do
             BG="$BG$F;\n"
         done
-        TXT="\nBackgrounds set with Feh, using $FEHFILE\n\n$BG"
+        TXT="Backgrounds set with Feh, using $FEHFILE\n\n$BG"
         echo -e "$TXT$DASHES" >> "$THEMEINFO"
     else
         echo "$FFILE not found" 2>&1
@@ -156,7 +156,7 @@ getNitrogen(){  # get Nitrogen saved backgrounds
                 BG="$BG$BGLINE;\n"
             fi
         done < $NFILE
-        TXT="\nBackgrounds set with Nitrogen, using $NITROFILE\n\n$BG"
+        TXT="Backgrounds set with Nitrogen, using $NITROFILE\n\n$BG"
         echo -e "$TXT$DASHES" >> "$THEMEINFO"
     else
         echo "$NFILE not found" 2>&1
@@ -280,8 +280,7 @@ checkTint2zen(){    # see if bl-tint2zen and session file present
     fi
 }
 
-getOBtheme(){
-    # copy <theme> section from rc.xml to obtheme.txt
+getOBtheme(){   # copy <theme> section from rc.xml to obtheme.txt
     RCFILE="$OBPATH/rc.xml"
     tag="theme"
     sed -n "/<$tag>/,/<\/$tag>/p" "$RCFILE" > "$CONFIGDIR/obtheme.txt"
@@ -292,13 +291,12 @@ getOBtheme(){
 getOBname(){    # get OB theme name
     OBFILE="$CONFIGDIR/obtheme.txt"
     OBTHEME=$(awk 'NR==2 {print;exit}' $OBFILE | awk -F'[>|<]' '{print $3}')
-    TXT="\nOpenbox theme:  $OBTHEME\n"
+    TXT="Openbox theme:  $OBTHEME\n"
     echo -e "$TXT$DASHES" >> "$THEMEINFO"
 
 }
 getGTKtheme(){
-    GTKTHEMES=( "$GTK2" "$GTK2MINE" "$GTK3" "$GTK3x/xfce4-notifyd.xml" )
-    
+    GTKTHEMES=( "$GTK2" "$GTK2MINE" "$GTK3" "$GTK3x" )
     for f in "${GTKTHEMES[@]}";do
         if [ -f "$f" ];then
             cp "$f" "$CONFIGDIR"
@@ -317,7 +315,7 @@ getGTKname(){   # get GTK theme name
             GTKTHEME=$(echo $line | awk -F '"' '{print $2}')
         fi
     done < $GTKFILE
-    TXT="\nGTK theme:  $GTKTHEME\n"
+    TXT="GTK theme:  $GTKTHEME\n"
     echo -e "$TXT$DASHES" >> "$THEMEINFO"
     
 }
@@ -461,64 +459,74 @@ restoreSettings(){
     done
     
     opt="FALSE"
-    LIST=""
+    VIEWSAVED="View_Saved_Settings"
+    LIST1="$opt $VIEWSAVED"
     for ((j=0; j<${#settingsARR[*]}; j++));do
         LIST="$LIST $opt ${settingsARR[j]}"
     done
+    LISTALL="$LIST1 $LIST"
 
-    viewThemes  # display saved-themes details
-    
-    RET=$(zenity --list  --title "$TITLE" \
-    --text "Choose the configs you want to restore" \
-    --width=340 --height=270 \
-    --radiolist \
-    --column "Pick" \
-    --column "Saved" $LIST)
-    
-    if [[ $? = 1 ]];then    # Cancel
-        exit 0
-    else
-        SETCFG="$RET/settings.cfg"
-        while read line;do
-            TAG=$(echo $line | awk '{print $1}')
-            VAL=$(echo $line | awk '{print $2}')
-            case "$TAG" in
-                "[TINT2]"       )   checkTint2zen # see if bl-tint2zen installed
-                                    if [[ $TZEN ]];then
-                                        > "$TINTSESSION" # overwrite tint2 session file
-                                    fi
-                                    TINTCMD=$(echo $line | cut -d ' ' -f2-)
-                                    echo $TINTCMD | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$TINTSESSION" # write to tint2 session file
-                                    killall tint2; eval "$TINTCMD"
-                                    exit 0
-                                    ;;
-                "[CONKY]"       )   checkConkyzen # see if bl-conkyzen installed
-                                    if [[ $CZEN ]];then
-                                        > "$CONKYSESSION" # overwrite conky session file
-                                    fi
-                                    CONKYCMD=$(echo $line | cut -d ' ' -f2-)
-                                    echo $CONKYCMD | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$CONKYSESSION" # write to conky session file
-                                    killall conky; eval "$CONKYCMD"
-                                    exit 0
-                                    ;;
-                "[GTK]"         )   restoreGTK "$RET"
-                                    ;;
-                "[OBTHEME]"     )   restoreOBrc "$RET"
-                                    ;;
-                "[BACKGROUND]"  )   if [[ $VAL = "FEH" ]];then
-                                        cp "$RET/.fehbg" "$HOME"
-                                        eval $(cat ~/.fehbg)
-                                    else
-                                        cp "$RET/bg-saved.cfg" "$NITRODIR"
-                                        (sleep 1s && nitrogen --restore) & 
-                                    fi
-                                    ;;
-                *               )   echo "Unknown value!" 2>&1
-                                    exit 1
-                                    ;;
-            esac
-        done < "$SETCFG"
-    fi
+    # Display dialogs to view or restore configs
+    LOOP=1
+    while [[ $LOOP = 1 ]];do
+        txt="Choose the configs you want to restore"
+        RET=$(showThemeZen "$txt" "$LISTALL")
+        if [[ $? = 1 ]];then    # Cancel
+            exit 0
+        fi
+        if ! [[ -z $RET ]];then
+            if [[ $RET = $VIEWSAVED ]];then
+                viewThemes "$LIST" # display saved-themes details
+            else
+                SETCFG="$RET/settings.cfg"
+                LOOP=0
+            fi
+        else
+            zenity --error  --title "$TITLE" \
+            --text="No choice made!" \
+            --width=340
+        fi
+    done
+    # Get chosen saved configs and restore them
+    while read line;do
+        TAG=$(echo $line | awk '{print $1}')
+        VAL=$(echo $line | awk '{print $2}')
+        case "$TAG" in
+            "[TINT2]"       )   checkTint2zen # see if bl-tint2zen installed
+                                if [[ $TZEN ]];then
+                                    > "$TINTSESSION" # overwrite tint2 session file
+                                fi
+                                TINTCMD=$(echo $line | cut -d ' ' -f2-)
+                                echo $TINTCMD | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$TINTSESSION" # write to tint2 session file
+                                killall tint2; eval "$TINTCMD"
+                                exit 0
+                                ;;
+            "[CONKY]"       )   checkConkyzen # see if bl-conkyzen installed
+                                if [[ $CZEN ]];then
+                                    > "$CONKYSESSION" # overwrite conky session file
+                                fi
+                                CONKYCMD=$(echo $line | cut -d ' ' -f2-)
+                                echo $CONKYCMD | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$CONKYSESSION" # write to conky session file
+                                killall conky; eval "$CONKYCMD"
+                                exit 0
+                                ;;
+            "[GTK]"         )   restoreGTK "$RET"
+                                ;;
+            "[OBTHEME]"     )   restoreOBrc "$RET"
+                                ;;
+            "[BACKGROUND]"  )   if [[ $VAL = "FEH" ]];then
+                                    cp "$RET/.fehbg" "$HOME"
+                                    eval $(cat ~/.fehbg)
+                                else
+                                    cp "$RET/bg-saved.cfg" "$NITRODIR"
+                                    (sleep 1s && nitrogen --restore) & 
+                                fi
+                                ;;
+            *               )   echo "Unknown value!" 2>&1
+                                exit 1
+                                ;;
+        esac
+    done < "$SETCFG"
 }
 
 function reloadGTK(){ # reload gtk theme after restoring saved config
@@ -535,28 +543,34 @@ events.send_clientmessage_toall()
 END
 }
 
-viewThemes(){
+viewThemes(){   # display saved themes details
     LOOP=1
     while [[ $LOOP = 1 ]];do
-        VIEW=$(zenity --list  --title "$TITLE" \
-        --text "View saved configs details?" \
-        --width=340 --height=270 \
-        --radiolist \
-        --column "Pick" \
-        --column "Saved" $LIST)
-        if [[ $? = 0 ]];then
-            if ! [ -z $VIEW ];then
-                SAVED="$VIEW/saved-themes.txt"
-                zenity --text-info --title "$TITLE" \
-                --filename="$SAVED" \
-                --width=600 --height=600
-            fi
+        txt="View saved configs details?"
+        VIEW=$(showThemeZen "$txt" "$LIST")
+        if [[ $? = 1 ]];then
+            break
+        elif ! [ -z $VIEW ];then
+            SAVED="$VIEW/saved-themes.txt"
+            
+            zenity --text-info --title "$TITLE" \
+            --filename="$SAVED" \
+            --width=600 --height=600
         else
             LOOP=0
         fi
     done
-
 }
+
+showThemeZen(){ # display list dialog
+    zenity --list  --title "$TITLE" \
+    --text="$1" \
+    --width=340 --height=270 \
+    --radiolist \
+    --column "Pick" \
+    --column "Saved" $2 
+}
+
 ### END FUNCTIONS ######################################################
 
 # test for blob config directory, create if it doesn't exist
