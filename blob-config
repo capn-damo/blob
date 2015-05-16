@@ -85,6 +85,7 @@ setName(){  # set name of collection, make dir and session settings file
                 mkdir -p "$CONFIGDIR"
                 SETTINGS="$CONFIGDIR/settings.cfg"
                 > "$SETTINGS"
+                echo "Configuration saved as: $ANS"
             fi
             break
         fi
@@ -295,6 +296,7 @@ getOBname(){    # get OB theme name
     OBTHEME=$(awk 'NR==2 {print;exit}' $OBFILE | awk -F'[>|<]' '{print $3}')
     TXT="Openbox theme:  $OBTHEME\n"
     echo -e "$TXT$DASHES" >> "$THEMEINFO"
+    echo "Saved Openbox theme: $OBTHEME"
 
 }
 getGTKtheme(){
@@ -319,13 +321,14 @@ getGTKname(){   # get GTK theme name
     done < $GTKFILE
     TXT="GTK theme:  $GTKTHEME\n"
     echo -e "$TXT$DASHES" >> "$THEMEINFO"
+    echo "Saved GTK theme: $GTKTHEME"
     
 }
 
 getLightdm(){
     if [ -e "$LDM" ];then
         cp "$LDM" "$CONFIGDIR"
-        echo "Saved $LDM"
+        echo "Saved Lightdm: $LDM"
         echo "[LIGHTDM]" >> "$SETTINGS"
         TXT="Lightdm configuration:  $LDM\n"
         echo -e "$TXT$DASHES" >> "$THEMEINFO"
@@ -355,6 +358,7 @@ getScrot(){
         fi
     done < $TEMP
     rm $TEMP
+    echo "Screenshot saved as $ANS.png"
 }
 
 restoreGTK(){
@@ -422,7 +426,7 @@ saveSettings(){
     
     CHOICE=$(zenity --list --checklist --title "$TITLE" \
     --text "Choose the configs you want to save..." \
-    --width=340 --height=270 \
+    --width=340 --height=300 \
     --column "Select" --column "Config" --separator=":" "${COLUMNS[@]}")
     
     if [[ $? = 1 ]]; then # cancel button pressed
