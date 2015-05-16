@@ -35,6 +35,7 @@ GTK2=".gtkrc-2.0"
 GTK2MINE=".gtkrc-2.0.mine"
 GTK3="$HOME/.config/gtk-3.0"
 GTK3x="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-notifyd.xml"
+LDM="/etc/lightdm/lightdm-gtk-greeter.conf"
 ### END CONFIGS VARIABLES
 
 ### DIALOG VARIABLES
@@ -46,6 +47,7 @@ PICKGTK="GTK theme"
 PICKCONKY="Conky"
 PICKTINT="Tint2"
 PICKBG="Background Wallpaper"
+PICKLDM="Lightdm Login theme"
 PICKSCROT="Save screenshot"
 ### END DIALOG VARIABLES
 
@@ -320,6 +322,16 @@ getGTKname(){   # get GTK theme name
     
 }
 
+getLightdm(){
+    if [ -e "$LDM" ];then
+        cp "$LDM" "$CONFIGDIR"
+        echo "Saved $LDM"
+        echo "[LIGHTDM]" >> "$SETTINGS"
+        TXT="Lightdm configuration:  $LDM\n"
+        echo -e "$TXT$DASHES" >> "$THEMEINFO"
+    fi
+}
+
 getScrot(){
     TEMP=$CONFIGPATH/temp.tmp
     IMG="$CONFIGPATH/$ANS.png" # NB 'scrot' is sensitive to quoting
@@ -391,6 +403,12 @@ restoreOBrc(){
     fi
 }
 
+restoreLightdm(){
+    CMD="cp $1 $LDM"
+    PWORD="$(zenity --password --title "Authenticate Lightdm")\n"
+    echo -e "$PWORD" | sudo -S $CMD
+}
+
 saveSettings(){
     COLUMNS=(\
     "FALSE" "$PICKOB" \
@@ -398,6 +416,7 @@ saveSettings(){
     "FALSE" "$PICKCONKY" \
     "FALSE" "$PICKTINT" \
     "FALSE" "$PICKBG" \
+    "FALSE" "$PICKLDM"
     "FALSE" "$PICKSCROT"\
     )
     
@@ -435,6 +454,8 @@ saveSettings(){
                     "$PICKTINT" )   getTint
                                     ;;
                     "$PICKBG"   )   getBg
+                                    ;;
+                    "$PICKLDM"  )   getLightdm
                                     ;;
                     "$PICKSCROT")   SCROT=1
                                     ;;
@@ -521,6 +542,8 @@ restoreSettings(){
                                     cp "$RET/bg-saved.cfg" "$NITRODIR"
                                     (sleep 1s && nitrogen --restore) & 
                                 fi
+                                ;;
+            "[LIGHTDM]"     )   restoreLightdm "$RET/lightdm-gtk-greeter.conf"
                                 ;;
             *               )   echo "Unknown value!" 2>&1
                                 exit 1
