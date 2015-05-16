@@ -5,13 +5,13 @@ blob
 blob-config : a bash script to save or restore Openbox gui configurations
 
 Save options are for  Conky(s)    default or current running conkys
-                   Tint2(s)    default or current running tint2s
-                   Openbox theme
-                   GTK theme
-                   Background (uses Nitrogen or feh, depending which
+                      Tint2(s)    default or current running tint2s
+                      Openbox theme
+                      GTK theme
+                      Background (uses Nitrogen or feh, depending which
                                has the newer saved bg config file)
-                   Lightdm login gtk greeter 
-                   Screenshot (Windows are hidden briefly so the image
+                      Lightdm login gtk greeter 
+                      Screenshot (Windows are hidden briefly so the image
                                is the bare desktop, with any Tint2s 
                                or Conkys which are running)
 
