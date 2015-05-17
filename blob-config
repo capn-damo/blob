@@ -408,33 +408,17 @@ restoreOBrc(){
     fi
 }
 
-restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter
+restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
     CMD="sudo cp $1 $LDM"
-    TXT="Authenticate restore of lightdm-gtk-greeter"
-    
-    if type xdpyinfo &>/dev/null;then   # check xdpyinfo exists
-        SCREENDIMS=$(xdpyinfo | awk '/dimensions/ {print $2}')
-        # centre terminal on screen, for sudo password
-        LEFT=$(echo $SCREENDIMS | awk -F"x" '{print $1}')
-        LEFT=$(($LEFT/2-246))
-        TOP=$(echo $SCREENDIMS | awk -F"x" '{print $2}')
-        TOP=$(($TOP/2-36))
-        GEOM="-geometry 70x5+$LEFT+$TOP"
-        GEOM_GNOME="--geometry 70x5+$LEFT+$TOP"
-        GEOM_TERMINATOR="--geometry 492x72+$LEFT+$TOP"
+    TXT="Authenticate restore of lightdm-gtk-greeter.conf"
+    if ! gksudo -m "$TXT" "$CMD"; then
+        MSG="Password input failed\n\nlightdm-gtk-greeter.conf was not restored"
+        echo -e "\n$MSG"
+        zenity --warning --text "$MSG"
     else
-        GEOM="-geometry 70x5"
-        GEOM_GNOME="--geometry 70x5"
-        GEOM_TERMINATOR="--geometry 492x72"
+        MSG="lightdm-gtk-greeter.conf restored"
+        echo -e "\n$MSG"
     fi
-    # get x-terminal-emulator in use
-    TERMINAL=$(update-alternatives --query x-terminal-emulator | awk -F/ '/^Value/ {print $NF}')
-    
-    case $TERMINAL in
-        gnome-terminal.wrapper  ) gnome-terminal $GEOM_GNOME -e "$CMD";;
-        terminator              ) terminator $GEOM_TERMINATOR -T "$TXT" --command "$CMD";;
-        *                       ) x-terminal-emulator $GEOM -T "$TXT" -e "$CMD";;
-    esac
 }
 
 saveSettings(){
