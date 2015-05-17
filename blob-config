@@ -413,7 +413,7 @@ restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter
     TXT="Authenticate restore of lightdm-gtk-greeter"
     
     if type xdpyinfo &>/dev/null;then   # check xdpyinfo exists
-        SCREENDIMS=$(xdpyinfo | grep dimensions | awk '{print $2}')
+        SCREENDIMS=$(xdpyinfo | awk '/dimensions/ {print $2}')
         echo $DIMS | awk -F"x" '{print "Width: "$1"    Height: "$2}'
         # centre terminal on screen, for sudo password
         LEFT=$(echo $SCREENDIMS | awk -F"x" '{print $1}')
@@ -429,7 +429,7 @@ restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter
         GEOM_TERMINATOR="--geometry 492x72"
     fi
     # get x-terminal-emulator in use
-    TERMINAL=$(update-alternatives --display x-terminal-emulator | grep currently | awk -F"/" '{print $NF}')
+    TERMINAL=$(update-alternatives --query x-terminal-emulator | awk -F/ '/^Value/ {print $NF}')
     
     case $TERMINAL in
         gnome-terminal.wrapper  ) gnome-terminal $GEOM_GNOME -e "$CMD";;
