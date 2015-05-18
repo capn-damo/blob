@@ -58,7 +58,8 @@ PICKSCROT="Save screenshot"
 
 setName(){  # set name of collection, make dir and session settings file
     MSG="Configurations will be saved to a new directory in\n$CONFIGPATH\n\nEnter name of new collection..."
-    while [ 1 ];do  # loop dialog if nothing is selected
+    LOOP=1
+    while [[ $LOOP ]];do  # loop dialog if nothing is selected
         ANS=$(zenity --entry --title "$TITLE" --text "$MSG") 
         if [[ $? == 1 ]];then # Cancel was selected
             exit 0
@@ -362,8 +363,7 @@ getScrot(){
     echo "Screenshot saved as $ANS.png"
 }
 
-restoreGTK(){
-    SAVEPATH="$1"
+restoreGTK(){   # $1 is chosen saved config dir
     GTKPATHS=( "$HOME" "$HOME" "$GTK3" "$GTK3x" )
     GTKSAVED=( "$1/$GTK2" "$1/$GTK2MINE" "$1/gtk-3.0" "$1/xfce4-notifyd.xml" )
     i=0
@@ -409,16 +409,24 @@ restoreOBrc(){
 }
 
 restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
-    CMD="sudo cp $1 $LDM"
+    CMD="cp $1 $LDM"
     TXT="Authenticate restore of lightdm-gtk-greeter.conf"
-    if ! gksudo -m "$TXT" "$CMD"; then
-        MSG="Password input failed\n\nlightdm-gtk-greeter.conf was not restored"
-        echo -e "\n$MSG"
-        zenity --warning --text "$MSG"
-    else
-        MSG="lightdm-gtk-greeter.conf restored"
-        echo -e "\n$MSG"
-    fi
+    LOOP=1
+    while [[ $LOOP ]];do
+        gksudo -m "$TXT" "$CMD"
+        DLG=$?
+        case "$DLG" in
+            0   )   MSG="lightdm-gtk-greeter.conf restored"
+                    echo -e "\n$MSG"
+                    break;;
+            255 )   MSG="Authentication cancelled\n\nlightdm-gtk-greeter.conf was not restored"
+                    echo -e "\n$MSG"
+                    break;;
+            *   )   MSG="Password input failed\n\nlightdm-gtk-greeter.conf was not restored"
+                    echo -e "\n$MSG"
+                    zenity --warning --text "$MSG";;
+        esac
+    done
 }
 
 saveSettings(){
@@ -487,8 +495,8 @@ restoreSettings(){
             if [ -e "$dir/settings.cfg" ];then
                 settingsARR[$i]="$dir"
             fi
+            i=$(($i+1))
         fi
-        i=$(($i+1))
     done
     
     opt="FALSE"
@@ -512,7 +520,7 @@ restoreSettings(){
                 viewThemes "$LIST" # display saved-themes details
             else
                 SETCFG="$RET/settings.cfg"
-                LOOP=0
+                break
             fi
         else
             zenity --error  --title "$TITLE" \
@@ -532,7 +540,6 @@ restoreSettings(){
                                 TINTCMD=$(echo $line | cut -d ' ' -f2-)
                                 echo $TINTCMD | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$TINTSESSION" # write to tint2 session file
                                 killall tint2; eval "$TINTCMD"
-                                exit 0
                                 ;;
             "[CONKY]"       )   checkConkyzen # see if bl-conkyzen installed
                                 if [[ $CZEN ]];then
@@ -541,7 +548,6 @@ restoreSettings(){
                                 CONKYCMD=$(echo $line | cut -d ' ' -f2-)
                                 echo $CONKYCMD | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$CONKYSESSION" # write to conky session file
                                 killall conky; eval "$CONKYCMD"
-                                exit 0
                                 ;;
             "[GTK]"         )   restoreGTK "$RET"
                                 ;;
@@ -552,7 +558,7 @@ restoreSettings(){
                                     eval $(cat ~/.fehbg)
                                 else
                                     cp "$RET/bg-saved.cfg" "$NITRODIR"
-                                    (sleep 1s && nitrogen --restore) & 
+                                    (sleep 1s && nitrogen --restore ) &
                                 fi
                                 ;;
             "[LIGHTDM]"     )   restoreLightdm "$RET/lightdm-gtk-greeter.conf"
@@ -592,7 +598,7 @@ viewThemes(){   # display saved themes details
             --filename="$SAVED" \
             --width=600 --height=600
         else
-            LOOP=0
+            break
         fi
     done
 }
@@ -610,7 +616,6 @@ showThemeZen(){ # display list dialog
 
 # test for blob config directory, create if it doesn't exist
 mkdir -p "$CONFIGPATH"
-
 
 # Choose Save or Restore
 zenity --question  --title "$TITLE" \
