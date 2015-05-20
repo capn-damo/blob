@@ -623,7 +623,7 @@ restoreSettings(){
                                     (sleep 1s && nitrogen --restore ) &
                                 fi
                                 ;;
-            "[DMENU]"       )   cp -rb "$RET/dmenu-bind.sh" "$DPATH"
+            "[DMENU]"       )   cp -b "$RET/dmenu-bind.sh" "$DPATH"
                                 ;;
             "[LIGHTDM]"     )   restoreLightdm "$RET/lightdm-gtk-greeter.conf"
                                 ;;
