@@ -72,6 +72,7 @@ setName(){  # set name of collection, make dir and session settings file
                 echo "  No name entered for new collection!" 2>&1
                 continue
             else
+                ANS=$(echo $ANS | sed -e 's/ /_/g')    # replace any spaces in dir name
                 CONFIGDIR="$CONFIGPATH/$ANS" 
                 if [ -d "$CONFIGDIR" ];then
                     echo "  $CONFIGDIR already exists"
@@ -83,7 +84,6 @@ setName(){  # set name of collection, make dir and session settings file
                         DEL=1
                         SETTINGS="$CONFIGDIR/settings.cfg"
                         > "$SETTINGS"
-                        echo "  Existing session overwritten"
                         break
                     else
                         continue
@@ -100,10 +100,10 @@ setName(){  # set name of collection, make dir and session settings file
     > "$THEMEINFO"
     TIME=$(date)
     echo -e "  Theme: $ANS\nSaved on $TIME\n$DASHES" >> "$THEMEINFO"
-    echo -e "  Configuration saved as: $ANS"
     if [[ $DEL ]];then
-        echo "  (Existing session overwritten)"
+        TXT="  (Existing session overwritten)"
     fi
+    echo "  Configuration saved as: $ANS $TXT"
 }
 
 getBg(){    # find if feh or nitrogen was used. Save config file(s)
@@ -383,7 +383,11 @@ getScrot(){
     for CONK in $(xdotool search --classname "Conky");do 
         xdotool windowactivate $CONK 
     done
-    sleep 0.5s && scrot "$IMG" && mogrify -resize 50%  "$IMG"    # make scrot
+    if type mogrify &>/dev/null;then    # imagemagick is installed
+        sleep 0.5s && scrot "$IMG" && mogrify -resize 50%  "$IMG"    # reduce image size
+    else
+        sleep 0.5s && scrot "$IMG"
+    fi
 
     while read line; do
         WINDOW=$(echo $line | awk '{print $1}') # Window_ID is first field
@@ -393,7 +397,9 @@ getScrot(){
         fi
     done < $TMPSCROT
     rm $TMPSCROT
-    echo "  Screenshot saved as: $ANS.jpg"
+    echo "  Screenshot saved as: $CONFIGPATH/$ANS.jpg"
+    TXT="Screenshot saved: $CONFIGPATH/$ANS.jpg\n"
+    echo -e "$TXT$DASHES" >> "$THEMEINFO"
 }
 
 restoreGTK(){   # $1 is chosen saved config dir
@@ -446,8 +452,7 @@ restoreOBrc(){
 restoreDmenu(){
     DFILE="$1"
     if [[ -e $DPATH ]];then        # backup dmenu-bind.sh first
-        NOW=$(date +"%Y%m%d-%H%M")
-        DMENUBKP="$DPATH.$NOW"
+        DMENUBKP="$DPATH.bkp"
         cp "$DPATH" "$DMENUBKP"
         echo -e "\n  $DPATH backed up and restored"
     else
@@ -488,59 +493,61 @@ saveSettings(){
     "FALSE" "$PICKLDM" \
     "FALSE" "$PICKSCROT"\
     )
+    SLOOP=1
+    while [[ $SLOOP == 1 ]];do
+        CHOICE=$(zenity --list --checklist --title "$TITLE" \
+        --text "Choose the configs you want to save..." \
+        --width=340 --height=310 \
+        --column "Select" --column "Config" --separator=":" "${COLUMNS[@]}")
     
-    CHOICE=$(zenity --list --checklist --title "$TITLE" \
-    --text "Choose the configs you want to save..." \
-    --width=340 --height=310 \
-    --column "Select" --column "Config" --separator=":" "${COLUMNS[@]}")
-    
-    if [[ $? == 1 ]]; then # cancel button pressed
-        if [ -d "$CONFIGDIR" ];then
-            rm -r "$CONFIGDIR"
-            echo -e "\n  Cancelled\n..$CONFIGDIR deleted\n"
-        fi
-        exit 0
-    else
-        if [ -z "$CHOICE" ]; then # entry field is empty, so exit
-            zenity --info --title "$TITLE" \
-            --text "No selections made\n\nExiting...." --width=300
+        if [[ $? == 1 ]]; then # cancel button pressed
+            if [ -d "$CONFIGDIR" ];then
+                rm -r "$CONFIGDIR"
+                echo -e "\n  Cancelled\n..$CONFIGDIR deleted\n"
+            fi
             exit 0
         else
-            i=0
-            OIFS=$IFS # save Internal Field Separator
-            IFS=":" # separator is ":" in returned choices
-            for ret in $CHOICE; do
-                retChoice[$i]="$ret"
-                i=$(($i+1))
-            done
-            IFS=$OIFS # reset IFS back to default
-            len=${#retChoice[@]}
-            for (( i=0; i<${len}; i++ ));do
-                item="${retChoice[$i-1]}"
-                case "$item" in
-                    "$PICKOB"   )   getOBtheme
-                                    ;;
-                    "$PICKGTK"  )   getGTKtheme
-                                    ;;
-                    "$PICKCONKY")   getConky
-                                    ;;
-                    "$PICKTINT" )   getTint
-                                    ;;
-                    "$PICKBG"   )   getBg
-                                    ;;
-                    "$PICKDMENU")   getDmenu
-                                    ;;
-                    "$PICKLDM"  )   getLightdm
-                                    ;;
-                    "$PICKSCROT")   SCROT=1
-                                    ;;
-                    *           )   echo "  Unknown value!" 2>&1
-                                    exit 1
-                                    ;;
-                esac
-            done
+            if [ -z "$CHOICE" ]; then # entry field is empty, so try again
+                zenity --info --title "$TITLE" \
+                --text "Make a selection...." --width=300
+            else
+                i=0
+                OIFS=$IFS # save Internal Field Separator
+                IFS=":" # separator is ":" in returned choices
+                for ret in $CHOICE; do
+                    retChoice[$i]="$ret"
+                    i=$(($i+1))
+                done
+                IFS=$OIFS # reset IFS back to default
+                len=${#retChoice[@]}
+                for (( i=0; i<${len}; i++ ));do
+                    item="${retChoice[$i-1]}"
+                    case "$item" in
+                        "$PICKOB"   )   getOBtheme
+                                        ;;
+                        "$PICKGTK"  )   getGTKtheme
+                                        ;;
+                        "$PICKCONKY")   getConky
+                                        ;;
+                        "$PICKTINT" )   getTint
+                                        ;;
+                        "$PICKBG"   )   getBg
+                                        ;;
+                        "$PICKDMENU")   getDmenu
+                                        ;;
+                        "$PICKLDM"  )   getLightdm
+                                        ;;
+                        "$PICKSCROT")   SCROT=1
+                                        ;;
+                        *           )   echo "  Unknown value!" 2>&1
+                                        exit 1
+                                        ;;
+                    esac
+                done
+                SLOOP=0
+            fi
         fi
-    fi
+    done
 }
 
 restoreSettings(){
