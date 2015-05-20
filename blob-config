@@ -37,6 +37,7 @@ GTK2MINE=".gtkrc-2.0.mine"
 GTK3="$HOME/.config/gtk-3.0"
 GTK3x="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-notifyd.xml"
 LDM="/etc/lightdm/lightdm-gtk-greeter.conf"
+DPATH="$HOME/.config/dmenu/dmenu-bind.sh"
 ### END CONFIGS VARIABLES
 
 ### DIALOG VARIABLES
@@ -48,6 +49,7 @@ PICKGTK="GTK theme"
 PICKCONKY="Conky"
 PICKTINT="Tint2"
 PICKBG="Background Wallpaper"
+PICKDMENU="dmenu (Alt menu)"
 PICKLDM="Lightdm Login theme"
 PICKSCROT="Save screenshot"
 ### END DIALOG VARIABLES
@@ -59,6 +61,7 @@ PICKSCROT="Save screenshot"
 setName(){  # set name of collection, make dir and session settings file
     MSG="Configurations will be saved to a new directory in\n$CONFIGPATH\n\nEnter name of new collection..."
     LOOP=1
+    DEL=0
     while [[ $LOOP ]];do  # loop dialog if nothing is selected
         ANS=$(zenity --entry --title "$TITLE" --text "$MSG") 
         if [[ $? == 1 ]];then # Cancel was selected
@@ -66,19 +69,21 @@ setName(){  # set name of collection, make dir and session settings file
         else
             if [ -z $ANS ];then     # entry was empty
                 zenity --error --text="No file specified for new saved session.\nTry again..."
-                echo "No name entered for new collection!" 2>&1
+                echo "  No name entered for new collection!" 2>&1
                 continue
             else
                 CONFIGDIR="$CONFIGPATH/$ANS" 
                 if [ -d "$CONFIGDIR" ];then
-                    echo "$CONFIGDIR already exists"
+                    echo "  $CONFIGDIR already exists"
                     zenity --question --title "$TITLE" \
                     --text "Overwrite existing saved session?" \
                     --width=300
-                    if [[ $? = 0 ]];then
+                    if [[ $? == 0 ]];then
                         rm -rf "$CONFIGDIR" && mkdir -p "$CONFIGDIR"
+                        DEL=1
                         SETTINGS="$CONFIGDIR/settings.cfg"
                         > "$SETTINGS"
+                        echo "  Existing session overwritten"
                         break
                     else
                         continue
@@ -87,7 +92,6 @@ setName(){  # set name of collection, make dir and session settings file
                 mkdir -p "$CONFIGDIR"
                 SETTINGS="$CONFIGDIR/settings.cfg"
                 > "$SETTINGS"
-                echo "Configuration saved as: $ANS"
             fi
             break
         fi
@@ -95,7 +99,11 @@ setName(){  # set name of collection, make dir and session settings file
     THEMEINFO="$CONFIGDIR/saved-themes.txt"
     > "$THEMEINFO"
     TIME=$(date)
-    echo -e "Theme: $ANS\nSaved on $TIME\n$DASHES" >> "$THEMEINFO"
+    echo -e "  Theme: $ANS\nSaved on $TIME\n$DASHES" >> "$THEMEINFO"
+    echo -e "  Configuration saved as: $ANS"
+    if [[ $DEL ]];then
+        echo "  (Existing session overwritten)"
+    fi
 }
 
 getBg(){    # find if feh or nitrogen was used. Save config file(s)
@@ -110,27 +118,27 @@ getBg(){    # find if feh or nitrogen was used. Save config file(s)
     elif [ -e "$NITROFILE" ] && ! [ -e "$FEHFILE" ];then    # use nitrogen for background
         BGSET="NITROGEN"
     else
-        echo "No background-setting application found" 2>&1
+        echo "  No background-setting application found" 2>&1
         BGSET="None"
     fi
-    echo "Background to be set with $BGSET"
+    echo "  Background to be set with $BGSET"
     
     case "$BGSET" in
         FEH     )   echo "[BACKGROUND] $BGSET" >> "$SETTINGS"
                     cp "$FEHFILE" "$CONFIGDIR"
-                    echo "$FEHFILE copied"
+                    echo "  $FEHFILE copied"
                     bgFeh
                     ;;
         NITROGEN)   echo "[BACKGROUND] $BGSET" >> "$SETTINGS"
                     cp "$NITRODIR/nitrogen.cfg" "$CONFIGDIR"
                     cp "$NITROFILE" "$CONFIGDIR"
-                    echo "Nitrogen file copied"
+                    echo "  Saved Nitrogen file: $NITROFILE"
                     getNitrogen
                     ;;
-        None    )   echo "No background-setting application found" 2>&1
+        None    )   echo "  No background-setting application found" 2>&1
                     echo "[BACKGROUND] $BGSET" >> "$SETTINGS"
                     ;;
-        *       )   echo "ERROR: No background config found" 2>&1
+        *       )   echo "  ERROR: No background config found" 2>&1
                     exit 1
                     ;;
     esac
@@ -153,30 +161,30 @@ bgFeh(){    # get Feh saved backgrounds
 
 getNitrogen(){  # get Nitrogen saved backgrounds
     NFILE="$CONFIGDIR/bg-saved.cfg"
-    if [ -f $NFILE ];then
+    if [ -f "$NFILE" ];then
         BG=""
         while read line;do
             BGLINE=$(echo $line | awk -F"file=" '{print $2}')
             if [[ $BGLINE ]];then
                 BG="$BG$BGLINE;\n"
             fi
-        done < $NFILE
+        done < "$NFILE"
         TXT="Backgrounds set with Nitrogen, using $NITROFILE\n\n$BG"
         echo -e "$TXT$DASHES" >> "$THEMEINFO"
     else
-        echo "$NFILE not found" 2>&1
+        echo "  $NFILE not found" 2>&1
     fi
 }
 
 getConky(){
     MSG="Use running conkys?\nIf 'No', then the default conkyrc will be used"
     zenity --question --title "$TITLE" --text "$MSG" --width=300
-    if [[ $? = 0 ]];then
-        echo "Using running conkys"
+    if [[ $? == 0 ]];then
+        echo "  Using running conkys"
         conkyRunning
         echo "[CONKY] $CONKYCMD" >> "$SETTINGS"
     else
-        echo "Using default conky"
+        echo "  Using default conky"
         echo "[CONKY] conky -c $HOME/.conkyrc;" >> "$SETTINGS"
     fi
 }
@@ -207,10 +215,10 @@ conkyRunning(){    # find running conkys
     > "$TEMP3"
     while read line;do
         if [[ $line = "-q" ]];then
-            CONKYCMD="$CONKYCMD""conky -c $HOME/.conkyrc & sleep 1s;"
+            CONKYCMD="$CONKYCMD""conky -c $HOME/.conkyrc && sleep 1s &;"
             echo "$HOME/.conkyrc;" >> "$TEMP3"
         else
-            CONKYCMD="$CONKYCMD""conky -c $line & sleep 1s;"
+            CONKYCMD="$CONKYCMD""conky -c $line && sleep 1s &;"
             echo "$line;" >> "$TEMP3"
         fi
     done    < "$TEMPFILE"
@@ -238,29 +246,41 @@ checkConkyzen(){    # see if bl-conkyzen and session file present
 getTint(){
     MSG="Use running Tint2?\nIf 'No', then the default tint2rc will be used"
     zenity --question --title "$TITLE" --text "$MSG" --width=300
-    if [[ $? = 0 ]];then
-        echo "Using running tint2s"
+    if [[ $? == 0 ]];then
+        echo "  Using running tint2s"
         tintRunning
         echo "[TINT2] $TINTCMD" >> "$SETTINGS"
     else
-        echo "Using default tint2"
-        echo "[TINT2] tint2 -c $HOME/.config/tint2/tint2rc & sleep 0.1s;" >> "$SETTINGS"
+        echo "  Using default tint2"
+        echo "[TINT2] tint2 -c $HOME/.config/tint2/tint2rc && sleep 0.1s &;" >> "$SETTINGS"
     fi
 }
 
 tintRunning(){
     > "$TEMPFILE" # make blank tempfile, to save running tint2 paths
     if [ "$(pidof tint2)" ];then
-        ps aux | grep [t]int2 | awk '{print $NF}' >> "$TEMPFILE"
+        # test if default tint2 was started (exclude dialog in this script from list)
+        for FIELD in $(ps aux | grep -v 'zenity' | grep  [t]int2 | awk '{print $NF}');do
+            if [[ $FIELD = "tint2" ]]; then
+                echo "$TINT2PATH/tint2rc" >> "$TEMPFILE"  # 'tint2' command was used
+            elif    # make sure the bl-tint2zen script doesn't appear in list
+                ! [[ $(echo "$FIELD" | awk -F '/' '{print $NF}') = "bl-tint2zen" ]];then
+                echo "$FIELD" >> "$TEMPFILE"    # send tint2 filepath to tempfile
+            fi
+        done
     fi
+    # remove any duplicates in tempfile
+    TEMP2="$HOME/tempfile2.tmp"
+    awk '!x[$0]++' "$TEMPFILE" > "$TEMP2" && mv "$TEMP2" "$TEMPFILE"
+    
     TINTCMD=""
     TEMP3="$HOME/tempfile3.tmp" # tempfile for saved-themes.txt
     while read line;do
         if [[ $line = "tint2" ]];then  # default tint2 was started with command "tint2"
-            TINTCMD="$TINTCMD""tint2 -c $HOME/.config/tint2/tint2rc & sleep 1s;"
+            TINTCMD="$TINTCMD""tint2 -c $HOME/.config/tint2/tint2rc && sleep 1s &;"
             echo "tint2/tint2rc;" >> "$TEMP3"
         else
-            TINTCMD="$TINTCMD""tint2 -c $line & sleep 1s;"
+            TINTCMD="$TINTCMD""tint2 -c $line && sleep 1s &;"
             echo "$line;" >> "$TEMP3"
         fi
     done    < "$TEMPFILE"
@@ -298,9 +318,10 @@ getOBname(){    # get OB theme name
     OBTHEME=$(awk 'NR==2 {print;exit}' $OBFILE | awk -F'[>|<]' '{print $3}')
     TXT="Openbox theme:  $OBTHEME\n"
     echo -e "$TXT$DASHES" >> "$THEMEINFO"
-    echo "Saved Openbox theme: $OBTHEME"
+    echo "  Saved Openbox theme: $OBTHEME"
 
 }
+
 getGTKtheme(){
     GTKTHEMES=( "$GTK2" "$GTK2MINE" "$GTK3" "$GTK3x" )
     for f in "${GTKTHEMES[@]}";do
@@ -323,44 +344,56 @@ getGTKname(){   # get GTK theme name
     done < $GTKFILE
     TXT="GTK theme:  $GTKTHEME\n"
     echo -e "$TXT$DASHES" >> "$THEMEINFO"
-    echo "Saved GTK theme: $GTKTHEME"
+    echo "  Saved GTK theme: $GTKTHEME"
     
+}
+
+getDmenu(){
+    if [[ -e $DPATH ]];then
+        cp "$DPATH" "$CONFIGDIR"
+        echo "[DMENU]" >> "$SETTINGS"
+        TXT="dmenu config:  $DPATH\n"
+        echo -e "$TXT$DASHES" >> "$THEMEINFO"
+        echo "  Saved dmenu config: $DPATH"
+    else
+        echo "  $DPATH not found"
+    fi
 }
 
 getLightdm(){
     if [ -e "$LDM" ];then
         cp "$LDM" "$CONFIGDIR"
-        echo "Saved Lightdm: $LDM"
+        echo "  Saved Lightdm config: $LDM"
         echo "[LIGHTDM]" >> "$SETTINGS"
-        TXT="Lightdm configuration:  $LDM\n"
+        TXT="Lightdm config:  $LDM\n"
         echo -e "$TXT$DASHES" >> "$THEMEINFO"
     fi
 }
 
 getScrot(){
-    TEMP=$CONFIGPATH/temp.tmp
-    IMG="$CONFIGPATH/$ANS.png" # NB 'scrot' is sensitive to quoting
+    TMPSCROT=$CONFIGPATH/tmpscrot.tmp
+    IMG="$CONFIGPATH/$ANS.jpg" # NB 'scrot' is sensitive to quoting
 
     # get current desktop number
     CURRDTOP=$(xprop -root _NET_CURRENT_DESKTOP | tail -c -2)
-    wmctrl -l -x > $TEMP    # store window list in tempfile
+    wmctrl -l -x > $TMPSCROT    # store window list in tempfile
     wmctrl -k on #&& sleep 0.2s  # show desktop with delay
     
     # show any conkys which have been hidden by wmctrl, for the scrot
     for CONK in $(xdotool search --classname "Conky");do 
         xdotool windowactivate $CONK 
     done
-    sleep 0.5s && scrot $IMG && mogrify -resize 50%  $IMG    # make scrot
+    sleep 0.5s && scrot "$IMG" && mogrify -resize 50%  "$IMG"    # make scrot
 
     while read line; do
         WINDOW=$(echo $line | awk '{print $1}') # Window_ID is first field
         DTOP=$(echo $line | awk '{print $2}' )  # Desktop number is second field
-        if [[ $DTOP = $CURRDTOP ]];then
+        if [[ $DTOP == $CURRDTOP ]];then
             xdotool windowactivate "$WINDOW" 
         fi
-    done < $TEMP
-    rm $TEMP
-    echo "Screenshot saved as $ANS.png"
+    done < $TMPSCROT
+    rm $TMPSCROT
+    echo "  Screenshot saved as: $ANS.jpg"
 }
 
 restoreGTK(){   # $1 is chosen saved config dir
@@ -370,15 +403,16 @@ restoreGTK(){   # $1 is chosen saved config dir
     for f in ${GTKSAVED[@]};do
         if [ -e "$f" ];then     # if destination exists
             if [ -e "${GTKPATHS[i]}" ];then
-                if [[ ${GTKSAVED[i]} == "$1/gtk-3.0" ]];then
+                if [[ ${GTKSAVED[i]} = "$1/gtk-3.0" ]];then
                     cp ${GTKSAVED[i]}/* ${GTKPATHS[i]} # restore contents of gtk-3.0
                 fi
                 cp ${GTKSAVED[i]} ${GTKPATHS[i]}
+                echo "  Restored: ${GTKSAVED[i]}"
             else
-                echo "Restore path ${GTKPATHS[i]} not found" 2>&1
+                echo "  Restore path ${GTKPATHS[i]} not found" 2>&1
             fi
         else
-            echo "${GTKSAVED[i]} not found" 2>&1
+            echo "  ${GTKSAVED[i]} not found" 2>&1
         fi
         i=$(($i+1))
     done
@@ -404,7 +438,21 @@ restoreOBrc(){
         }" $FTEMP
         sed -i '/^$/d' $FTEMP   # remove empty lines
         cp $FTEMP "$RCFILE"     # overwrite rc.xml
+        echo "  rc.xml backed up and edited for OB theme"
         rm $FTEMP
+    fi
+}
+
+restoreDmenu(){
+    DFILE="$1"
+    if [[ -e $DPATH ]];then        # backup dmenu-bind.sh first
+        NOW=$(date +"%Y%m%d-%H%M")
+        DMENUBKP="$DPATH.$NOW"
+        cp "$DPATH" "$DMENUBKP"
+        echo -e "\n  $DPATH backed up and restored"
+    else
+        cp "$DFILE" "$DPATH"
+        echo -e "\n  $DPATH restored"
     fi
 }
 
@@ -416,13 +464,13 @@ restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
         gksudo -m "$TXT" "$CMD"
         DLG=$?
         case "$DLG" in
-            0   )   MSG="lightdm-gtk-greeter.conf restored"
+            0   )   MSG="  Restored: lightdm-gtk-greeter.conf"
                     echo -e "\n$MSG"
                     break;;
-            255 )   MSG="Authentication cancelled\n\nlightdm-gtk-greeter.conf was not restored"
+            255 )   MSG="  Authentication cancelled\n\nlightdm-gtk-greeter.conf was not restored"
                     echo -e "\n$MSG"
                     break;;
-            *   )   MSG="Password input failed\n\nlightdm-gtk-greeter.conf was not restored"
+            *   )   MSG="  Password input failed\n\nlightdm-gtk-greeter.conf was not restored"
                     echo -e "\n$MSG"
                     zenity --warning --text "$MSG";;
         esac
@@ -436,16 +484,21 @@ saveSettings(){
     "FALSE" "$PICKCONKY" \
     "FALSE" "$PICKTINT" \
     "FALSE" "$PICKBG" \
-    "FALSE" "$PICKLDM"
+    "FALSE" "$PICKDMENU" \
+    "FALSE" "$PICKLDM" \
     "FALSE" "$PICKSCROT"\
     )
     
     CHOICE=$(zenity --list --checklist --title "$TITLE" \
     --text "Choose the configs you want to save..." \
-    --width=340 --height=300 \
+    --width=340 --height=310 \
     --column "Select" --column "Config" --separator=":" "${COLUMNS[@]}")
     
-    if [[ $? = 1 ]]; then # cancel button pressed
+    if [[ $? == 1 ]]; then # cancel button pressed
+        if [ -d "$CONFIGDIR" ];then
+            rm -r "$CONFIGDIR"
+            echo -e "\n  Cancelled\n..$CONFIGDIR deleted\n"
+        fi
         exit 0
     else
         if [ -z "$CHOICE" ]; then # entry field is empty, so exit
@@ -475,11 +528,13 @@ saveSettings(){
                                     ;;
                     "$PICKBG"   )   getBg
                                     ;;
+                    "$PICKDMENU")   getDmenu
+                                    ;;
                     "$PICKLDM"  )   getLightdm
                                     ;;
                     "$PICKSCROT")   SCROT=1
                                     ;;
-                    *           )   echo "Unknown value!" 2>&1
+                    *           )   echo "  Unknown value!" 2>&1
                                     exit 1
                                     ;;
                 esac
@@ -493,6 +548,7 @@ restoreSettings(){
     for dir in "$CONFIGPATH"/* ;do
         if [ -d "$dir" ];then
             if [ -e "$dir/settings.cfg" ];then
+                dir=$(echo $dir | sed -e 's/ /_/g')    # replace any spaces in dir name
                 settingsARR[$i]="$dir"
             fi
             i=$(($i+1))
@@ -502,6 +558,7 @@ restoreSettings(){
     opt="FALSE"
     VIEWSAVED="View_Saved_Settings"
     LIST1="$opt $VIEWSAVED"
+    
     for ((j=0; j<${#settingsARR[*]}; j++));do
         LIST="$LIST $opt ${settingsARR[j]}"
     done
@@ -509,10 +566,10 @@ restoreSettings(){
 
     # Display dialogs to view or restore configs
     LOOP=1
-    while [[ $LOOP = 1 ]];do
+    while [[ $LOOP == 1 ]];do
         txt="Choose the configs you want to restore"
         RET=$(showThemeZen "$txt" "$LISTALL")
-        if [[ $? = 1 ]];then    # Cancel
+        if [[ $? == 1 ]];then    # Cancel
             exit 0
         fi
         if ! [[ -z $RET ]];then
@@ -529,6 +586,13 @@ restoreSettings(){
         fi
     done
     # Get chosen saved configs and restore them
+    ##TFLAG=""   # may be needed for compositing issues
+    ##if type bl-compositor &>/dev/null;then
+        ##COMPTON=1
+    ##else
+        ##COMPTON=""
+    ##fi
+    
     while read line;do
         TAG=$(echo $line | awk '{print $1}')
         VAL=$(echo $line | awk '{print $2}')
@@ -539,7 +603,9 @@ restoreSettings(){
                                 fi
                                 TINTCMD=$(echo $line | cut -d ' ' -f2-)
                                 echo $TINTCMD | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$TINTSESSION" # write to tint2 session file
-                                killall tint2; eval "$TINTCMD"
+                                killall tint2; source "$TINTSESSION"
+                                ## restart compton, in case user has issues with rendering tint2
+                                ##TFLAG=1
                                 ;;
             "[CONKY]"       )   checkConkyzen # see if bl-conkyzen installed
                                 if [[ $CZEN ]];then
@@ -547,7 +613,7 @@ restoreSettings(){
                                 fi
                                 CONKYCMD=$(echo $line | cut -d ' ' -f2-)
                                 echo $CONKYCMD | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$CONKYSESSION" # write to conky session file
-                                killall conky; eval "$CONKYCMD"
+                                killall conky; source "$CONKYSESSION"
                                 ;;
             "[GTK]"         )   restoreGTK "$RET"
                                 ;;
@@ -561,9 +627,11 @@ restoreSettings(){
                                     (sleep 1s && nitrogen --restore ) &
                                 fi
                                 ;;
+            "[DMENU]"       )   restoreDmenu "$RET/dmenu-bind.sh"
+                                ;;
             "[LIGHTDM]"     )   restoreLightdm "$RET/lightdm-gtk-greeter.conf"
                                 ;;
-            *               )   echo "Unknown value!" 2>&1
+            *               )   echo "  Unknown value!" 2>&1
                                 exit 1
                                 ;;
         esac
@@ -586,10 +654,10 @@ END
 
 viewThemes(){   # display saved themes details
     LOOP=1
-    while [[ $LOOP = 1 ]];do
+    while [[ $LOOP == 1 ]];do
         txt="View saved configs details?"
         VIEW=$(showThemeZen "$txt" "$LIST")
-        if [[ $? = 1 ]];then
+        if [[ $? == 1 ]];then
             break
         elif ! [ -z $VIEW ];then
             SAVED="$VIEW/saved-themes.txt"
@@ -623,16 +691,20 @@ zenity --question  --title "$TITLE" \
 --ok-label "Save" \
 --cancel-label "Restore"
 
-if [[ $? = 0 ]]; then # Save button pressed
+if [[ $? == 0 ]]; then # Save button pressed
     setName
     saveSettings
-    if [[ $SCROT = 1 ]];then # scrot needs to be done last
+    if [[ $SCROT == 1 ]];then # scrot needs to be done last
         getScrot 
     fi
 else
     restoreSettings
     openbox --reconfigure 
     reloadGTK
+    ##if [[ "$TFLAG" && "$COMPTON" ]];then
+        ##echo -e "\n  Restarting compton..."
+        ##sleep 1s && bl-compositor --restart &
+    ##fi
 fi
 
 exit 0
