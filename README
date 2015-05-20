@@ -10,7 +10,8 @@ Save options are for  Conky(s)    default or current running conkys
                       GTK theme
                       Background (uses Nitrogen or feh, depending which
                                has the newer saved bg config file)
-                      Lightdm login gtk greeter 
+                      Lightdm login gtk greeter
+                      dmenu (Alt menu) 
                       Screenshot (Windows are hidden briefly so the image
                                is the bare desktop, with any Tint2s 
                                or Conkys which are running)
