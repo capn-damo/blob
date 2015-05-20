@@ -10,7 +10,8 @@
 #                       GTK theme
 #                       Background (uses Nitrogen or feh, depending which
 #                                   has the newer saved bg config file)
-#                       Lightdm login gtk greeter 
+#                       Lightdm login gtk greeter
+#                       dmenu (Alt menu) 
 #                       Screenshot (Windows are hidden briefly so the image
 #                                   is the bare desktop, with any Tint2s 
 #                                   or Conkys which are running)
@@ -449,18 +450,6 @@ restoreOBrc(){
     fi
 }
 
-restoreDmenu(){
-    DFILE="$1"
-    if [[ -e $DPATH ]];then        # backup dmenu-bind.sh first
-        DMENUBKP="$DPATH.bkp"
-        cp "$DPATH" "$DMENUBKP"
-        echo -e "\n  $DPATH backed up and restored"
-    else
-        cp "$DFILE" "$DPATH"
-        echo -e "\n  $DPATH restored"
-    fi
-}
-
 restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
     CMD="cp $1 $LDM"
     TXT="Authenticate restore of lightdm-gtk-greeter.conf"
@@ -634,7 +623,7 @@ restoreSettings(){
                                     (sleep 1s && nitrogen --restore ) &
                                 fi
                                 ;;
-            "[DMENU]"       )   restoreDmenu "$RET/dmenu-bind.sh"
+            "[DMENU]"       )   cp -rb "$RET/dmenu-bind.sh" "$DPATH"
                                 ;;
             "[LIGHTDM]"     )   restoreLightdm "$RET/lightdm-gtk-greeter.conf"
                                 ;;
