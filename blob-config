@@ -10,8 +10,7 @@
 #                       GTK theme
 #                       Background (uses Nitrogen or feh, depending which
 #                                   has the newer saved bg config file)
-#                       Lightdm login gtk greeter
-#                       dmenu (Alt menu) 
+#                       Lightdm login gtk greeter 
 #                       Screenshot (Windows are hidden briefly so the image
 #                                   is the bare desktop, with any Tint2s 
 #                                   or Conkys which are running)
@@ -26,6 +25,7 @@ CONFIGDIR=""
 SCROT=0
 CZEN=0
 TZEN=0
+CONKYCMD=""
 ### CONFIGS VARIABLES
 FEHFILE="$HOME/.fehbg"
 NITRODIR="$HOME/.config/nitrogen"
@@ -100,7 +100,7 @@ setName(){  # set name of collection, make dir and session settings file
     THEMEINFO="$CONFIGDIR/saved-themes.txt"
     > "$THEMEINFO"
     TIME=$(date)
-    echo -e "  Theme: $ANS\nSaved on $TIME\n$DASHES" >> "$THEMEINFO"
+    echo -e "Theme: $ANS\nSaved on $TIME\n$DASHES" >> "$THEMEINFO"
     if [[ $DEL ]];then
         TXT="  (Existing session overwritten)"
     fi
@@ -178,62 +178,59 @@ getNitrogen(){  # get Nitrogen saved backgrounds
 }
 
 getConky(){
-    MSG="Use running conkys?\nIf 'No', then the default conkyrc will be used"
-    zenity --question --title "$TITLE" --text "$MSG" --width=300
-    if [[ $? == 0 ]];then
-        echo "  Using running conkys"
-        conkyRunning
-        echo "[CONKY] $CONKYCMD" >> "$SETTINGS"
-    else
-        echo "  Using default conky"
-        echo "[CONKY] conky -c $HOME/.conkyrc;" >> "$SETTINGS"
+    if [ "$(pidof conky)" ];then
+        MSG="Use running conkys?\nIf 'No', then the default conkyrc will be used"
+        zenity --question --title "$TITLE" --text "$MSG" --width=300
+        if [[ $? == 0 ]];then
+            echo "  Using running conkys"
+            conkyRunning
+            writeConkys
+        else # Choice is "No", so use default conky
+            writeDefConky
+        fi
+    else    # No conkys running, use default
+        writeDefConky
     fi
 }
 
 conkyRunning(){    # find running conkys
-    > "$TEMPFILE" # make blank tempfile, to save running conky paths
-    if [ "$(pidof conky)" ];then
-        # test if default conky was started
-        for ARG in $(ps aux | grep  [c]onky | awk '{print $(NF-1)}');do
-            if [[ $ARG = "conky" ]]; then
-                echo "$HOME/.conkyrc" >> "$TEMPFILE"  # 'conky -q' probably used
-            else                            # send conky filepath to tempfile
-                for ARG in $(ps aux | grep  [c]onkyrc | awk '{print $(NF)}');do
-                    if [[ $ARG != "-q" ]];then
-                        echo "$ARG" >> "$TEMPFILE"
-                    fi
-                done
+    > "$TEMPFILE" # make blank tempfile, to save running conky paths    
+    pgrep -a conky | while read pid cmd;do
+        if [[ ${cmd%% *} = conky ]];then
+            if [[ $cmd = "conky -q" ]];then   # conky -q was used
+                echo "$cmd;" >> "$TEMPFILE"
+            else
+                CPATH=$(echo "$cmd" | awk '{print $NF}')
+                echo "$CPATH;" >> "$TEMPFILE"
             fi
-        done
-    fi
-    
-    CONKYCMD=""
-    # remove any duplicates in tempfile
-    TEMP2="$HOME/tempfile2.tmp"
-    awk '!x[$0]++' "$TEMPFILE" > "$TEMP2" && mv "$TEMP2" "$TEMPFILE"
-    
-    TEMP3="$HOME/tempfile3.tmp" # tempfile for saved-themes.txt
-    > "$TEMP3"
-    while read line;do
-        if [[ $line = "-q" ]];then
-            CONKYCMD="$CONKYCMD""conky -c $HOME/.conkyrc && sleep 1s &;"
-            echo "$HOME/.conkyrc;" >> "$TEMP3"
-        else
-            CONKYCMD="$CONKYCMD""conky -c $line && sleep 1s &;"
-            echo "$line;" >> "$TEMP3"
         fi
-    done    < "$TEMPFILE"
-    rm "$TEMPFILE"
-    writeConkys
+    done
 }
 
-writeConkys(){  # save conky names to saved-themes.txt
+writeDefConky(){ # write default conky to saved-themes.txt and settings.cfg
+    CTXT="Conkys:\n\nDefault conky\n$DASHES"
+    echo "  Using default conky"
+    echo "[CONKY] conky -q & sleep 1s;" >> "$SETTINGS"
+    echo -e "$CTXT" >> "$THEMEINFO"
+}
+
+writeConkys(){  # save conky names to saved-themes.txt and settings.cfg
     TXT="Conkys:\n\n"
+    CONKYCMD=""
     while read line;do
-        TXT="$TXT$line\n"
-    done < "$TEMP3"
+        LINE=$(echo "$line" | sed 's/;//')
+        # test if default conky was used
+        if [[ $LINE = "conky -q" ]] &>/dev/null;then
+            CONKYCMD="$CONKYCMD""conky -q & sleep 1s;"
+            TXT="$TXT""Default\n"
+        else
+            CONKYCMD="$CONKYCMD""conky -c $LINE & sleep 1s;"
+            TXT="$TXT$line\n"
+        fi
+    done < "$TEMPFILE"
     echo -e "$TXT$DASHES" >> "$THEMEINFO"
-    rm "$TEMP3"
+    echo "[CONKY] $CONKYCMD" >> "$SETTINGS"
+    rm "$TEMPFILE"
 }
 
 checkConkyzen(){    # see if bl-conkyzen and session file present
@@ -245,57 +242,61 @@ checkConkyzen(){    # see if bl-conkyzen and session file present
 }
 
 getTint(){
-    MSG="Use running Tint2?\nIf 'No', then the default tint2rc will be used"
-    zenity --question --title "$TITLE" --text "$MSG" --width=300
-    if [[ $? == 0 ]];then
-        echo "  Using running tint2s"
-        tintRunning
-        echo "[TINT2] $TINTCMD" >> "$SETTINGS"
-    else
-        echo "  Using default tint2"
-        echo "[TINT2] tint2 -c $HOME/.config/tint2/tint2rc && sleep 0.1s &;" >> "$SETTINGS"
+    if [ "$(pidof tint2)" ];then
+        MSG="Use running Tint2?\nIf 'No', then the default tint2rc will be used"
+        zenity --question --title "$TITLE" --text "$MSG" --width=300
+        if [[ $? == 0 ]];then
+            echo "  Using running tint2s"
+            tintRunning
+            writeTint2s
+        else # Choice is "No", so use default tint2
+            writeDefTint2
+        fi
+    else    # No tint2s running, so use default 
+        writeDefTint2
     fi
 }
 
 tintRunning(){
-    > "$TEMPFILE" # make blank tempfile, to save running tint2 paths
-    if [ "$(pidof tint2)" ];then
-        # test if default tint2 was started (exclude dialog in this script from list)
-        for FIELD in $(ps aux | grep -v 'zenity' | grep  [t]int2 | awk '{print $NF}');do
-            if [[ $FIELD = "tint2" ]]; then
-                echo "$TINT2PATH/tint2rc" >> "$TEMPFILE"  # 'tint2' command was used
-            elif    # make sure the bl-tint2zen script doesn't appear in list
-                ! [[ $(echo "$FIELD" | awk -F '/' '{print $NF}') = "bl-tint2zen" ]];then
-                echo "$FIELD" >> "$TEMPFILE"    # send tint2 filepath to tempfile
-            fi
-        done
-    fi
-    # remove any duplicates in tempfile
-    TEMP2="$HOME/tempfile2.tmp"
-    awk '!x[$0]++' "$TEMPFILE" > "$TEMP2" && mv "$TEMP2" "$TEMPFILE"
-    
-    TINTCMD=""
-    TEMP3="$HOME/tempfile3.tmp" # tempfile for saved-themes.txt
-    while read line;do
-        if [[ $line = "tint2" ]];then  # default tint2 was started with command "tint2"
-            TINTCMD="$TINTCMD""tint2 -c $HOME/.config/tint2/tint2rc && sleep 1s &;"
-            echo "tint2/tint2rc;" >> "$TEMP3"
-        else
-            TINTCMD="$TINTCMD""tint2 -c $line && sleep 1s &;"
-            echo "$line;" >> "$TEMP3"
+    > "$TEMPFILE" # make blank tempfile, to save running conky paths    
+    pgrep -a tint2 | while read pid cmd;do
+        if [[ ${cmd%% *} = tint2 ]];then
+            TPATH=$(echo "$cmd" | awk '{print $NF}')
+            echo "$TPATH;" >> "$TEMPFILE"
         fi
-    done    < "$TEMPFILE"
-    rm "$TEMPFILE"
-    writeTint2s
+    done
 }
 
-writeTint2s(){  # save tint2 names to saved-themes.txt
+writeTint2s(){  # save tint2 names to saved-themes.txt and settings.cfg
     TXT="Tint2s:\n\n"
+    TINTCMD=""
     while read line;do
         TXT="$TXT$line\n"
-    done < "$TEMP3"
+        LINE=$(echo "$line" | sed 's/;//')
+        if [[ $LINE = tint2 ]];then # default command was used
+            TINTCMD="$TINTCMD$LINE;"
+        else
+            TINTCMD="$TINTCMD$LINE;"
+        fi
+    done < "$TEMPFILE"
     echo -e "$TXT$DASHES" >> "$THEMEINFO"
-    rm "$TEMP3"
+    echo "[TINT2] $TINTCMD" >> "$SETTINGS"
+    rm "$TEMPFILE"
+}
+
+writeDefTint2(){ # write default tint2 to saved-themes.txt and settings.cfg
+    TTXT="Tint2s:\n\nDefault tint2rc\n$DASHES"
+    echo "  Using default tint2"
+    echo "[TINT2] $HOME/.config/tint2/tint2rc;" >> "$SETTINGS"
+    echo -e "$TTXT" >> "$THEMEINFO"
+}
+
+killTints(){
+    pgrep -a tint2 | while read pid cmd; do 
+        if [[ ${cmd%% *} = tint2 ]]; then
+            kill "$pid"
+        fi     
+    done
 }
 
 checkTint2zen(){    # see if bl-tint2zen and session file present
@@ -450,6 +451,30 @@ restoreOBrc(){
     fi
 }
 
+restoreTint2(){
+    echo "TINTCMD= $1"
+    echo "$1" | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$TINTSESSION" # write to tint2 session file
+    killTints
+    while read tintline;do
+        tint2 -c "$tintline" &
+        sleep 1s
+    done < "$TINTSESSION"
+    # restart compton, in case user has issues with rendering tint2
+    TFLAG=1
+}
+
+restoreDmenu(){
+    DFILE="$1"
+    if [[ -e $DPATH ]];then        # backup dmenu-bind.sh first
+        DMENUBKP="$DPATH.bkp"
+        cp "$DPATH" "$DMENUBKP"
+        echo -e "\n  $DPATH backed up and restored"
+    else
+        cp "$DFILE" "$DPATH"
+        echo -e "\n  $DPATH restored"
+    fi
+}
+
 restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
     CMD="cp $1 $LDM"
     TXT="Authenticate restore of lightdm-gtk-greeter.conf"
@@ -581,13 +606,14 @@ restoreSettings(){
             --width=340
         fi
     done
+     
     # Get chosen saved configs and restore them
-    ##TFLAG=""   # may be needed for compositing issues
-    ##if type bl-compositor &>/dev/null;then
-        ##COMPTON=1
-    ##else
-        ##COMPTON=""
-    ##fi
+    TFLAG=""   # may be needed for compositing issues
+    if type bl-compositor &>/dev/null;then
+        COMPTON=1
+    else
+        COMPTON=""
+    fi
     
     while read line;do
         TAG=$(echo $line | awk '{print $1}')
@@ -598,10 +624,7 @@ restoreSettings(){
                                     > "$TINTSESSION" # overwrite tint2 session file
                                 fi
                                 TINTCMD=$(echo $line | cut -d ' ' -f2-)
-                                echo $TINTCMD | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$TINTSESSION" # write to tint2 session file
-                                killall tint2; source "$TINTSESSION"
-                                ## restart compton, in case user has issues with rendering tint2
-                                ##TFLAG=1
+                                restoreTint2 "$TINTCMD"
                                 ;;
             "[CONKY]"       )   checkConkyzen # see if bl-conkyzen installed
                                 if [[ $CZEN ]];then
@@ -623,7 +646,7 @@ restoreSettings(){
                                     (sleep 1s && nitrogen --restore ) &
                                 fi
                                 ;;
-            "[DMENU]"       )   cp -b "$RET/dmenu-bind.sh" "$DPATH"
+            "[DMENU]"       )   restoreDmenu "$RET/dmenu-bind.sh"
                                 ;;
             "[LIGHTDM]"     )   restoreLightdm "$RET/lightdm-gtk-greeter.conf"
                                 ;;
@@ -697,10 +720,10 @@ else
     restoreSettings
     openbox --reconfigure 
     reloadGTK
-    ##if [[ "$TFLAG" && "$COMPTON" ]];then
-        ##echo -e "\n  Restarting compton..."
-        ##sleep 1s && bl-compositor --restart &
-    ##fi
+    if [[ "$TFLAG" == 1 ]] && [[ "$COMPTON" == 1 ]];then
+        echo -e "\n  Restarting compton..."
+        bl-compositor --restart &
+    fi
 fi
 
 exit 0
