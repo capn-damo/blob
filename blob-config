@@ -156,7 +156,7 @@ bgFeh(){    # get Feh saved backgrounds
         TXT="Backgrounds set with Feh, using $FEHFILE\n\n$BG"
         echo -e "$TXT$DASHES" >> "$THEMEINFO"
     else
-        echo "$FFILE not found" 2>&1
+        echo "  $FFILE not found" 2>&1
     fi
 }
 
@@ -216,15 +216,16 @@ writeDefConky(){ # write default conky to saved-themes.txt and settings.cfg
 
 writeConkys(){  # save conky names to saved-themes.txt and settings.cfg
     TXT="Conkys:\n\n"
+    DEF="Default\n"
     CONKYCMD=""
     while read line;do
         LINE=$(echo "$line" | sed 's/;//')
         # test if default conky was used
-        if [[ $LINE = "conky -q" ]] &>/dev/null;then
-            CONKYCMD="$CONKYCMD""conky -q & sleep 1s;"
-            TXT="$TXT""Default\n"
+        if [[ $LINE = "conky -q" ]];then
+            CONKYCMD="$CONKYCMD conky -q & sleep 1s;"
+            TXT="$TXT$DEF"
         else
-            CONKYCMD="$CONKYCMD""conky -c $LINE & sleep 1s;"
+            CONKYCMD="$CONKYCMD conky -c $LINE & sleep 1s;"
             TXT="$TXT$line\n"
         fi
     done < "$TEMPFILE"
@@ -459,7 +460,7 @@ restoreTint2(){
         tint2 -c "$tintline" &
         sleep 1s
     done < "$TINTSESSION"
-    # restart compton, in case user has issues with rendering tint2
+    # flag to restart compton, in case user has issues with rendering tint2
     TFLAG=1
 }
 
@@ -487,10 +488,10 @@ restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
                     echo -e "\n$MSG"
                     break;;
             255 )   MSG="  Authentication cancelled\n\nlightdm-gtk-greeter.conf was not restored"
-                    echo -e "\n$MSG"
+                    echo -e "\n$MSG" 2>&1
                     break;;
             *   )   MSG="  Password input failed\n\nlightdm-gtk-greeter.conf was not restored"
-                    echo -e "\n$MSG"
+                    echo -e "\n$MSG" 2>&1
                     zenity --warning --text "$MSG";;
         esac
     done
