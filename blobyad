@@ -10,6 +10,7 @@
 #                       GTK theme
 #                       Background (uses Nitrogen or feh, depending which
 #                                   has the newer saved bg config file)
+#                       Alt Menu (dmenu)
 #                       Lightdm login gtk greeter 
 #                       Screenshot (Windows are hidden briefly so the image
 #                                   is the bare desktop, with any Tint2s 
@@ -54,20 +55,21 @@ PICKBG="Background Wallpaper"
 PICKDMENU="dmenu (Alt menu)"
 PICKLDM="Lightdm Login theme"
 PICKSCROT="Save screenshot"
-DIALOG="yad --center --undecorated"
-TEXT="--text="
+DIALOG="yad --center --undecorated --borders=20"
+T="--text="
 OK="--button=gtk-ok:0"
 CANCEL="--button=gtk-cancel:1"
 EXIT="--button=gtk-quit:1"
-TXTINTRO="\n\n\tBunsenLabs Openbox Configuration Manager\n\n\n \
-\tSave or Restore settings for:\n\n \
+TXTINTRO="\n\n<big><b>BunsenLabs\nOpenbox Configuration Manager</b></big>\n\n\n \
+<b>Save or Restore settings for:</b>\n\n \
 \t\tOpenbox theme\n \
 \t\tGTK theme\n \
 \t\tConkys\n \
 \t\tTint2\n \
-\t\tLightDM theme\n \
 \t\tDesktop Background\n \
-\t\tSave screenshot\n\n"
+\t\tAlt Menu (dmenu) \
+\t\tLightDM theme\n \
+\t\tSave screenshot"
 ### END DIALOG VARIABLES
 
 #### END VARIABLES #####################################################
@@ -77,13 +79,13 @@ TXTINTRO="\n\n\tBunsenLabs Openbox Configuration Manager\n\n\n \
 function setName(){  # set name of collection, make dir and session settings file
     MSG="  Configurations will be saved to a new directory in  \
     \n  $CONFIGPATH\n\n  Enter name of new collection...  "
-    MSG2="  No file specified for new saved session.\n  Try again?"
+    MSG2="  No file specified for new saved session.\n\n  Try again?"
     LOOP=1
     DEL=0
     while [[ $LOOP ]];do  # loop dialog if nothing is selected
         ANS=$($DIALOG --entry \
             $CANCEL $OK \
-            --text="$MSG" 
+            "$T$MSG" 
             )
         if [[ $? = 1 ]] ;then # Cancel was selected
             exit 0
@@ -108,7 +110,7 @@ function setName(){  # set name of collection, make dir and session settings fil
                     echo "  $CONFIGDIR already exists"
                     
                     $DIALOG --form --image="dialog-question" \
-                    --text="Overwrite existing saved session?" \
+                    "$TOverwrite existing saved session?" \
                     "$CANCEL" "$OK" \
                     --width=300 
                     
@@ -137,6 +139,10 @@ function setName(){  # set name of collection, make dir and session settings fil
         TXT="  (Existing session overwritten)"
     fi
     echo "  Configuration saved as: $ANS $TXT"
+    
+    # build final message in tempfile
+    TEMPMSG="$CONFIGDIR/tempmsg.txt"
+    echo "Configuration name: <b>$ANS</b> (Existing session overwritten)" > "$TEMPMSG"
 }
 
 function getBg(){    # find if feh or nitrogen was used. Save config file(s)
@@ -215,7 +221,7 @@ function getConky(){
         DLG=$($DIALOG --form \
                 --button="No:1" $OK \
                 --image="dialog-question" \
-                --text="$MSG" \
+                "$T$MSG" \
                 --width=300 \
                 )
         if [[ $? = 0 ]];then
@@ -249,6 +255,7 @@ function writeDefConky(){ # write default conky to saved-themes.txt and settings
     echo "  Using default conky"
     echo "[CONKY] conky -q & sleep 1s;" >> "$SETTINGS"
     echo -e "$CTXT" >> "$THEMEINFO"
+    echo "Default Conky" >> "$TEMPMSG"
 }
 
 function writeConkys(){  # save conky names to saved-themes.txt and settings.cfg
@@ -269,6 +276,7 @@ function writeConkys(){  # save conky names to saved-themes.txt and settings.cfg
     echo -e "$TXT$DASHES" >> "$THEMEINFO"
     echo "[CONKY] $CONKYCMD" >> "$SETTINGS"
     rm "$TEMPFILE"
+    echo "Running Conkys" >> "$TEMPMSG"
 }
 
 function checkConkyzen(){    # see if bl-conkyzen and session file present
@@ -285,7 +293,7 @@ function getTint(){
         DLG=$($DIALOG --form \
                 --button="No:1" $OK \
                 --image="dialog-question" \
-                --text="$MSG" \
+                "$T$MSG" \
                 --width=300 \
                 )
         if [[ $? = 0 ]];then
@@ -325,6 +333,7 @@ function writeTint2s(){  # save tint2 names to saved-themes.txt and settings.cfg
     echo -e "$TXT$DASHES" >> "$THEMEINFO"
     echo "[TINT2] $TINTCMD" >> "$SETTINGS"
     rm "$TEMPFILE"
+    echo "Running Tint2s" >> "$TEMPMSG"
 }
 
 function writeDefTint2(){ # write default tint2 to saved-themes.txt and settings.cfg
@@ -332,6 +341,7 @@ function writeDefTint2(){ # write default tint2 to saved-themes.txt and settings
     echo "  Using default tint2"
     echo "[TINT2] $HOME/.config/tint2/tint2rc;" >> "$SETTINGS"
     echo -e "$TTXT" >> "$THEMEINFO"
+    echo "Default Tint2" >> "$TEMPMSG"
 }
 
 function killTints(){
@@ -364,6 +374,7 @@ function getOBname(){    # get OB theme name
     TXT="Openbox theme:  $OBTHEME\n"
     echo -e "$TXT$DASHES" >> "$THEMEINFO"
     echo "  Saved Openbox theme: $OBTHEME"
+    echo "Openbox theme: $OBTHEME" >> "$TEMPMSG"
 }
 
 function getGTKtheme(){
@@ -389,6 +400,7 @@ function getGTKname(){   # get GTK theme name
     TXT="GTK theme:  $GTKTHEME\n"
     echo -e "$TXT$DASHES" >> "$THEMEINFO"
     echo "  Saved GTK theme: $GTKTHEME"
+    echo "GTK theme: $GTKTHEME" >> "$TEMPMSG"
     
 }
 
@@ -399,6 +411,7 @@ function getDmenu(){
         TXT="dmenu config:  $DPATH\n"
         echo -e "$TXT$DASHES" >> "$THEMEINFO"
         echo "  Saved dmenu config: $DPATH"
+        echo "dmenu settings" >> "$TEMPMSG"
     else
         echo "  $DPATH not found"
     fi
@@ -411,6 +424,7 @@ function getLightdm(){
         echo "[LIGHTDM]" >> "$SETTINGS"
         TXT="Lightdm config:  $LDM\n"
         echo -e "$TXT$DASHES" >> "$THEMEINFO"
+        echo "LightDM settings" >> "$TEMPMSG"
     fi
 }
 
@@ -444,6 +458,7 @@ function getScrot(){
     echo "  Screenshot saved as: $CONFIGPATH/$ANS.jpg"
     TXT="Screenshot saved: $CONFIGPATH/$ANS.jpg\n"
     echo -e "$TXT$DASHES" >> "$THEMEINFO"
+    echo "Screenshot: $CONFIGPATH/$ANS.jpg" >> "$TEMPMSG"
 }
 
 function restoreGTK(){   # $1 is chosen saved config dir
@@ -535,7 +550,7 @@ function restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
                     ;;
             *   )   MSG="  Password input failed\n\nlightdm-gtk-greeter.conf was not restored"
                     echo -e "\n$MSG" 2>&1
-                    "$DIALOG" --image="dialog-warning" --text="$MSG" "$OK"
+                    "$DIALOG" --image="dialog-warning" "$T$MSG" "$OK"
                     ;;
         esac
     done
@@ -574,7 +589,7 @@ function saveSettings(){
         else
             if [[ ! $CHOICE ]] ; then # entry field is empty, so try again
                 RET=$($DIALOG  --image="dialog-question" \
-                --text="Make a selection...." \
+                --text="\n  Make a selection...." \
                 $EXIT $OK \
                 --width=300 \
                 )
@@ -623,6 +638,9 @@ function saveSettings(){
             fi
         fi
     done
+    TXT="<big><b>Openbox Configurations saved:</b></big>\n\n"
+    TXT2=$(cat $TEMPMSG)
+    $DIALOG --text="$TXT$TXT2"
 }
 
 function restoreSettings(){
@@ -646,11 +664,11 @@ function restoreSettings(){
 
     # Display dialogs to view or restore configs
     LOOP=1
-    while [[ $LOOP ]] ;do # yad decided it needs button ID's as even numbers!???
+    while [[ $LOOP ]] ;do # yad only prints even return codes
         TXT="Choose the configs you want to restore"
         CHOICE=$($DIALOG --list --separator=":" --radiolist \
             --button="View:0" --button="Restore:2" $CANCEL \
-            --text="$TXT" \
+            "$T$TXT" \
             --width=340 --height=270 \
             --column="" --column="Saved Theme Collection" \
             $LIST \
@@ -668,7 +686,7 @@ function restoreSettings(){
                 yad --text-info --center "$TITLE" \
                 --filename="$SAVED" \
                 --width=600 --height=600 \
-                "$CLOSE"
+                "$CLOSE" 
             
             elif [[ $RET = 2 ]];then
                 SETCFG="$FPATH/settings.cfg"
@@ -758,13 +776,13 @@ mkdir -p "$CONFIGPATH"
 
 # Choose Save or Restore
 INTRO=$(
-    $DIALOG --form \
+    $DIALOG \
     --image="/home/damo/.icons/Bunsenlabs-flame-small.svg" \
-    --text="$TXTINTRO" \
-    --height=300 --width=550 \
+    "$T$TXTINTRO" \
     --button="Save:0" \
     --button="Restore:2" \
     $CANCEL \
+    --borders=30 \
     )
 RET=$?
 case $RET in
