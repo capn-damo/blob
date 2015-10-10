@@ -2,7 +2,7 @@
 #
 # blobthemes: script to save or restore openbox gui configurations
 #
-# (Requires yad, imagemagick, wmctrl, xdotool, xrandr, nitrogen|feh)
+# (Requires yad, wmctrl, xdotool, xrandr, nitrogen|feh)
 #
 # Written for BunsenLabs by damo <damo@bunsenlabs.org> October 2015
 #
@@ -17,7 +17,8 @@
 # 
 # A Screenshot is saved (Windows are hidden briefly so the image
 #                        is the bare desktop, with any Tint2s 
-#                        or Conkys which are running)
+#                        or Conkys which are running, and a representive
+#                        menu open)
 #
 # The dialog icon is "Bunsenlabs-flame-small.svg" - adjust the filepath
 # to wherever it is stored ("IMGPATH" variable)
@@ -26,6 +27,8 @@
 # If you have the right button set to something else, then adjust the 
 # "MOUSECMD" variable
 #
+########################################################################
+
 #### VARIABLES #########################################################
 CONFIGPATH="$HOME/.config/blob"
 SETTINGS=""
@@ -61,7 +64,7 @@ PICKSCROT="Save screenshot"
 ### END CONFIGS VARIABLES
 
 ### DIALOG VARIABLES
-DIALOG="yad --center --undecorated --borders=20"
+DIALOG="yad --center --undecorated --borders=20 --window-icon=gtk-preferences"
 IMG="--image="
 IMGPATH="Bunsenlabs-flame-small.svg"
 T="--text="
@@ -77,7 +80,7 @@ TXTINTRO="\n\n<big><b>BunsenLabs\n\nOpenbox Configuration Manager</b></big>\n\n\
 \t\tDesktop Background\n \
 \t\tAlt Menu (dmenu)\n \
 \t\tLightDM theme\n \
-\t\tSave screenshot"
+\t\t+ Screenshot"
 ### END DIALOG VARIABLES
 
 ### USER OB ACTIONS
@@ -199,7 +202,7 @@ function bgFeh(){    # get Feh saved backgrounds
     if [ -f "$FFILE" ];then
         BG=""
         # get fields between single quotes
-        for F in $(grep -o "'.*'" $FFILE | sed "s/'//g");do
+        for F in $(grep -o "'.*'" $FFILE | sed "s/'//g" 2>/dev/null);do
             BG="$BG$F;\n"
         done
         TXT="Backgrounds set with Feh, using $FEHFILE\n\n$BG"
@@ -319,8 +322,8 @@ function getTint(){
             echo "  Using running tint2s"
             tintRunning
             writeTint2s
-        else # Choice is "No", so use default tint2
-            writeDefTint2
+        else
+            writeDefTint2   # Choice is "No", so use default tint2
         fi
     fi
 }
@@ -420,7 +423,7 @@ function getGTKname(){   # get GTK theme name
     
     GTKFILE="$CONFIGDIR/.gtkrc-2.0"
     while read line;do
-        if [ $(echo $line | grep "gtk-theme-name" ) ];then
+        if [ $(echo $line | grep "gtk-theme-name" ) ] &>/dev/null;then
             GTKTHEME=$(echo $line | awk -F '"' '{print $2}')
         fi
     done < $GTKFILE
@@ -465,19 +468,19 @@ function ShowRootMenu(){ # Display root menu for screenshot
     xdotool mousemove --sync $posX $posY 
     
     # display "Menu -> Preferences" as an example
+    # (Adjust the moves to display the entry you want!)
     xdotool $MOUSECMD \
     key Down key Down key Down key Down key Down key Down \
     key Down key Down key Down key Down key Down key Down \
     key Down key Down && sleep 0.1
     
-    xdotool key Right && sleep 0.2 
+    xdotool key Right && sleep 0.2
 }
 
 function getScrot(){            # Get screenshot & create thumbnail
     
     TMPSCROT="$CONFIGPATH/tmpscrot.tmp"
-    IMGFULL="$CONFIGPATH/$ANS" # NB 'scrot' is sensitive to quoting
-    IMGTHUMB="$CONFIGDIR/$ANS"
+    SCROT="$CONFIGPATH/$ANS"
     
     # get current desktop number
     CURRDTOP=$(xprop -root _NET_CURRENT_DESKTOP | tail -c -2)
@@ -488,14 +491,14 @@ function getScrot(){            # Get screenshot & create thumbnail
     for CONK in $(xdotool search --sync --classname "Conky");do 
         xdotool windowactivate "$CONK" 
     done
-    ShowRootMenu    # display root menu for the scrot
     
-    if type convert &>/dev/null;then    # imagemagick is installed
-        sleep 0.5 && scrot "$IMGFULL.jpg"
-        convert "$IMGFULL.jpg" -resize 200  "$IMGTHUMB-th.jpg"    # reduce image size
-    else
-        sleep 0.5 && scrot "$IMGFULL.jpg"
-    fi
+    ShowRootMenu    # display root menu for the scrot
+
+    scrot -t 15 "$SCROT.jpg"
+
+    THUMB=$(find $CONFIGPATH -maxdepth 1 -type f -name "*-thumb.jpg" 2>/dev/null)
+    mv $THUMB $CONFIGDIR
+
     # close root menu
     xdotool mousemove_relative --sync --polar 0 10 $MOUSECMD
     
@@ -541,7 +544,7 @@ function restoreOBrc(){
     THEMEFILE="$1/obtheme.txt"
     FTEMP="$1/temp.txt"
 
-    if [[ $(grep "[OBTHEME]" "$1/settings.cfg" ) ]];then
+    if [[ $(grep "[OBTHEME]" "$1/settings.cfg" ) ]] &>/dev/null;then
         # backup rc.xml first
         NOW=$(date +"%Y%m%d-%H%M")
         RCBKP="$RCFILE.$NOW"
@@ -570,8 +573,6 @@ function restoreTint2(){
         tint2 -c "$tintline" &
         sleep 1s
     done < "$TINTSESSION"
-    # flag to restart compton, in case user has issues with rendering tint2
-    TFLAG=1
 }
 
 function restoreDmenu(){
@@ -640,7 +641,7 @@ function saveSettings(){
         CHOICE=$($DIALOG --list --checklist --title \
             --text="Choose the configs you want to save..." \
             $CANCEL $OK \
-            --width=340 --height=310 \
+            --width=340 --height=300 \
             --column="Select" --column="Config" "${COLUMNS[@]}" \
             )
     
@@ -662,7 +663,7 @@ function saveSettings(){
                 IFS=$"|" # separator is "|" in returned choices
                 # dialog return is in format 'TRUE|value|\nTRUE|value'
                 for ret in $CHOICE; do
-                    if [[ $(echo $ret | grep TRUE) ]];then 
+                    if [[ $(echo $ret | grep TRUE) ]] &>/dev/null;then
                         continue
                     fi
                     retChoice[$i]="$ret"
@@ -713,14 +714,13 @@ function ViewRestoreDialog(){  #   Display saved theme collections
             if [ -e "$dir/settings.cfg" ];then
                 dir=$(echo $dir | sed -e 's/ /_/g')    # replace any spaces in dir name
                 namesARR[$i]="<big>$(basename $dir)</big>" # add theme collection name to array
-                
-                IMGTHUMB="None"         # Placeholder if no thumbnail found
-                for f in "$dir"/*;do    # add scrot thumb to array
-                    if grep image <<< $(file -i $f);then
-                        IMGTHUMB="$f"
-                        break
-                    fi
-                done
+
+                IMGTHUMB="None"     # Placeholder if no thumbnail found
+                f="$dir/*-thumb.jpg"
+                if [[ $f ]];then
+                    IMGTHUMB="$f"
+                fi
+
                 thumbsARR[$i]="$IMGTHUMB"
 
                 CONFIGS="\""
@@ -745,10 +745,10 @@ function restoreSettings(){
     LOOP=1
     while [[ $LOOP ]] ;do 
         CONFIG=$($DIALOG --list --text="Double-click selection, or \"OK\" to restore settings\n" \
-            --width=400 --height=500 --center --image-preview \
+            --width=460 --height=500 --center --image-preview \
             --expand-column=2 \
             --column="Saved Configuration":TEXT \
-            --column="SCROT":IMG \
+            --column="Screenshot":IMG \
             $DLGLIST \
             )
         RET=$?
@@ -774,13 +774,6 @@ function restoreSettings(){
     SETCFG="$FPATH/settings.cfg"
 
     # Get chosen saved configs and restore them
-    TFLAG=""   # may be needed for compositing issues
-    if type bl-compositor &>/dev/null;then
-        COMPTON=1
-    else
-        COMPTON=""
-    fi
-    
     while read line;do
         TAG=$(echo $line | awk '{print $1}')
         VAL=$(echo $line | awk '{print $2}')
@@ -797,7 +790,8 @@ function restoreSettings(){
                                     > "$CONKYSESSION" # overwrite conky session file
                                 fi
                                 CONKYCMD=$(echo $line | cut -d ' ' -f2-)
-                                echo $CONKYCMD | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$CONKYSESSION" # write to conky session file
+                                # write to conky session file...
+                                echo $CONKYCMD | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$CONKYSESSION"
                                 killall conky; source "$CONKYSESSION"
                                 ;;
             "[GTK]"         )   restoreGTK "$FPATH"
@@ -861,7 +855,6 @@ case $RET in
             rm -rf "$CONFIGDIR-BKP"
             echo -e "Temporary $CONFIGDIR deleted\n"
         fi
-    
         ;;
     1)  echo "CANCEL..."
         exit 0
@@ -869,10 +862,6 @@ case $RET in
     2)  restoreSettings
         openbox --reconfigure 
         reloadGTK
-        if [[ $TFLAG = 1 ]] && [[ $COMPTON = 1 ]];then
-            echo -e "\n  Restarting compton..."
-            bl-compositor --restart &
-        fi
         ;;
     *)  echo "RETURN ERROR" 2>&1
         ;;
