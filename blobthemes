@@ -20,6 +20,8 @@
 #                        or Conkys which are running, and a representive
 #                        menu open)
 #
+# A time-stamped backup of rc.xml is saved "just in case". 
+#
 # The dialog icon is "Bunsenlabs-flame-small.svg" - adjust the filepath
 # to wherever it is stored ("IMGPATH" variable)
 #
@@ -34,10 +36,13 @@ CONFIGPATH="$HOME/.config/blob"
 SETTINGS=""
 TEMPFILE="$HOME/tempfile.tmp"
 OBPATH="$HOME/.config/openbox"
+CURSESSION="$CONFIGPATH/current"
 CONFIGDIR=""
+LISTMSG=""
 SCROT=0
 CZEN=0
 TZEN=0
+NUMDIRS=0
 CONKYCMD=""
 ### CONFIGS VARIABLES
 FEHFILE="$HOME/.fehbg"
@@ -65,12 +70,15 @@ PICKSCROT="Save screenshot"
 
 ### DIALOG VARIABLES
 DIALOG="yad --center --undecorated --borders=20 --window-icon=gtk-preferences"
+DIALOGDEC="yad --center  --borders=20 --window-icon=gtk-preferences"
+TITLE="BLOB Config Manager"
 IMG="--image="
 IMGPATH="Bunsenlabs-flame-small.svg"
 T="--text="
-OK="--button=gtk-ok:0"
+OK="--button=OK:0"
 CANCEL="--button=gtk-cancel:1"
 EXIT="--button=gtk-quit:1"
+CLOSE="--button=gtk-close:1"
 TXTINTRO="\n\n<big><b>BunsenLabs\n\nOpenbox Configuration Manager</b></big>\n\n\n \
 <b>Save or Restore settings for:</b>\n\n \
 \t\tOpenbox theme\n \
@@ -80,7 +88,7 @@ TXTINTRO="\n\n<big><b>BunsenLabs\n\nOpenbox Configuration Manager</b></big>\n\n\
 \t\tDesktop Background\n \
 \t\tAlt Menu (dmenu)\n \
 \t\tLightDM theme\n \
-\t\t+ Screenshot"
+\t\t+ Screenshot\n\n"
 ### END DIALOG VARIABLES
 
 ### USER OB ACTIONS
@@ -90,8 +98,67 @@ MOUSECMD="click 3"      #   R-click (show root-menu)
 
 ### FUNCTIONS ##########################################################
 
+function Intro(){
+
+    getSet
+    #  If blob/ is empty, then don't display "Save Settings" option in Intro dialog
+    if [[ $NUMDIRS -gt 0 ]];then
+        INTRO=$($DIALOGDEC $IMG$IMGPATH "$T$TXTINTRO" \
+        --title="$TITLE" \
+        --button="Save Settings:0" --button="View Saved:2" $CLOSE \
+        --borders=30 \
+        --width=460 --height=500 \
+        2>/dev/null ) 
+    else
+        INTRO=$($DIALOGDEC $IMG$IMGPATH \
+        "$T$TXTINTRO" \
+        --button="Save Settings:0" --button="gtk-close:1" \
+        --borders=30 \
+        2>/dev/null ) 
+    fi
+
+    RET=$?
+    case $RET in
+        0)  setName
+            saveSettings
+            getScrot
+            if [[ -d $CONFIGDIR-BKP ]];then
+                rm -rf "$CONFIGDIR-BKP"
+                echo -e "Temporary $CONFIGDIR deleted\n"
+            fi
+            $DIALOG --text="Settings were saved as <b>$ANS</b>" --image="gtk-save" "$OK"
+            if [[ $? ]];then
+                restoreSettings
+            fi
+            ;;
+        1)  echo "CANCEL..."
+            exit 0
+            ;;
+        2)  getSet
+            restoreSettings
+            openbox --reconfigure 
+            reloadGTK
+            restoreSettings
+            ;;
+        *)  echo "RETURN ERROR" 2>&1
+            ;;
+    esac
+}
+
+function getSet(){      # get name of currently set BLOB config
+
+    NUMDIRS=$(find $CONFIGPATH/* -maxdepth 0 -type d | wc -l) 2>/dev/null
+    if [ $NUMDIRS == 0 ];then
+        if [[ -f $CURSESSION ]];then
+            rm $CURSESSION
+        fi
+    elif [ $NUMDIRS -gt 0 ] && [[ -f $CURSESSION ]];then
+        SET=$(cat $CURSESSION)
+    fi
+}
+
 function setName(){  # set name of collection, make dir and session settings file
-    
+
     MSG="  Configurations will be saved to a new directory in  \
     \n  $CONFIGPATH\n\n  Enter name of new collection...  "
     MSG2="  No file specified for new saved session.\n\n  Try again?"
@@ -99,82 +166,88 @@ function setName(){  # set name of collection, make dir and session settings fil
     DEL=0
     while [[ $LOOP ]];do  # loop dialog if nothing is selected
         ANS=$($DIALOG --entry \
-            $CANCEL $OK \
-            "$T$MSG" 
-            )
+            $CANCEL --button="OK:0" \
+            "$T$MSG" \
+            2>/dev/null )
         if [[ $? = 1 ]] ;then # Cancel was selected
-            exit 0
-        else
-            if [[ ! $ANS ]] ;then     # entry was empty
-                $DIALOG --image="dialog-question" \
-                "$CANCEL" "$OK" \
-                "$T$MSG2"
-                
-                RET=$?
-                echo "  No name entered for new collection!" 2>&1
-                if [[ $RET = 0 ]];then
-                    continue
-                else
-                    exit 0
-                fi
+            Intro
+        elif [[ ! $ANS ]] ;then     # entry was empty
+            $DIALOG --image="dialog-question" \
+            "$CANCEL" "$OK" \
+            "$T$MSG2" \
+            2>/dev/null
+
+            RET=$?
+            echo "  No name entered for new collection!" 2>&1
+            if [[ $RET = 0 ]];then
+                continue
             else
-                ANS=$(echo $ANS | sed -e 's/ /_/g')    # replace any spaces in dir name
-                CONFIGDIR="$CONFIGPATH/$ANS" 
-                if [ -d "$CONFIGDIR" ];then
-                    echo "  $CONFIGDIR already exists"
-                    
-                    $DIALOG --form --image="dialog-question" \
-                    --text="Overwrite existing saved session?" \
-                    "$CANCEL" "$OK" \
-                    --width=300 
-                    
-                    if [[ $? = 0 ]];then
-                        mv {"$CONFIGDIR","$CONFIGDIR-BKP"} && mkdir -p "$CONFIGDIR"
-                        DEL=1
-                        SETTINGS="$CONFIGDIR/settings.cfg"
-                        > "$SETTINGS"
-                        break
-                    else
-                        continue
-                    fi
-                fi
-                mkdir -p "$CONFIGDIR"
-                SETTINGS="$CONFIGDIR/settings.cfg"
-                > "$SETTINGS"
+                Intro
             fi
+        else
+            ANS=$(echo $ANS | sed -e 's/ /_/g')    # replace any spaces in dir name
+            CONFIGDIR="$CONFIGPATH/$ANS" 
+            if [[ -d $CONFIGDIR ]];then
+                echo "  $CONFIGDIR already exists"
+
+                $DIALOG --form --image="dialog-question" \
+                --text="Overwrite existing saved session?" \
+                "$CANCEL" "$OK" \
+                --width=300 \
+                2>/dev/null
+
+                if [[ $? = 0 ]];then
+                    mv {"$CONFIGDIR","$CONFIGDIR-BKP"} && mkdir -p "$CONFIGDIR"
+                    DEL=1
+                    SETTINGS="$CONFIGDIR/settings.cfg"
+                    > "$SETTINGS"
+                    LISTMSG="$CONFIGDIR/LISTMSG.txt"
+                    > "$LISTMSG"
+                    break
+                else
+                    continue
+                fi
+            fi
+            mkdir -p "$CONFIGDIR"
+            SETTINGS="$CONFIGDIR/settings.cfg"
+            LISTMSG="$CONFIGDIR/LISTMSG.txt"
+            > "$SETTINGS"
+            > "$LISTMSG"
             break
         fi
     done
 
     TIME=$(date)
+
     if [[ $DEL = 1 ]];then
         TXT="  (Existing session overwritten)"
+    else
+        TXT=""
     fi
-    echo "  Configuration will be saved as: $ANS $TXT"
-    
+    echo "  Configuration will be saved as: $ANS$TXT"
+
     # Store list in listfile
-    LISTMSG="$CONFIGDIR/LISTMSG.txt"
-    echo "Configuration name: <b>$ANS</b>\t$TXT\nSaved at $TIME\n" > "$LISTMSG"
+    echo "Configuration name: <b>$ANS</b>\t$TXT\nSaved at $TIME\n" >> "$LISTMSG"
 }
 
 function getBg(){    # find if feh or nitrogen was used. Save config file(s)
-    
-    if [ -e "$NITROFILE" ] && [ -e "$FEHFILE" ];then  # see which was last used to set background
-        if [ "$NITROFILE" -nt "$FEHFILE" ];then # use most recent method 
+
+    if [[ -e $NITROFILE ]] && [[ -e $FEHFILE ]];then  # see which was last used to set background
+        if [[ $NITROFILE -nt $FEHFILE ]];then # use most recent method 
             BGSET="NITROGEN"
         else
             BGSET="FEH"
         fi
-    elif [ -e "$FEHFILE" ] && ! [ -e "$NITROFILE" ];then  # use feh for background
+    elif [[ -e $FEHFILE ]] && [[ ! -e $NITROFILE ]];then  # use feh for background
         BGSET="FEH" 
-    elif [ -e "$NITROFILE" ] && ! [ -e "$FEHFILE" ];then    # use nitrogen for background
+    elif [[ -e $NITROFILE ]] &&  [[ ! -e $FEHFILE ]];then    # use nitrogen for background
         BGSET="NITROGEN"
     else
         echo "  No background-setting application found" 2>&1
         BGSET="None"
     fi
     echo "  Background to be set with $BGSET"
-    
+
     case "$BGSET" in
         FEH     )   echo "[BACKGROUND] $BGSET" >> "$SETTINGS"
                     cp "$FEHFILE" "$CONFIGDIR"
@@ -197,9 +270,9 @@ function getBg(){    # find if feh or nitrogen was used. Save config file(s)
 }
 
 function bgFeh(){    # get Feh saved backgrounds
-    
+
     FFILE="$CONFIGDIR/.fehbg"
-    if [ -f "$FFILE" ];then
+    if [[ -f $FFILE ]];then
         BG=""
         # get fields between single quotes
         for F in $(grep -o "'.*'" $FFILE | sed "s/'//g" 2>/dev/null);do
@@ -213,9 +286,9 @@ function bgFeh(){    # get Feh saved backgrounds
 }
 
 function getNitrogen(){  # get Nitrogen saved backgrounds
-    
+
     NFILE="$CONFIGDIR/bg-saved.cfg"
-    if [ -f "$NFILE" ];then
+    if [[ -f $NFILE ]];then
         BG=""
         while read line;do
             BGLINE=$(echo $line | awk -F"file=" '{print $2}')
@@ -231,29 +304,29 @@ function getNitrogen(){  # get Nitrogen saved backgrounds
 }
 
 function getConky(){
-    
-    if [ "$(pidof conky)" ];then
+
+    if [[ $(pidof conky) ]];then
         MSG="Use running conkys?\nIf 'No', then the default conkyrc will be used"
         DLG=$($DIALOG --form \
                 --button="No:1" $OK \
                 --image="dialog-question" \
                 "$T$MSG" \
                 --width=300 \
-                )
+                2>/dev/null )
         if [[ $? = 0 ]];then
             echo "  Using running conkys"
             conkyRunning
             writeConkys
-        else # Choice is "No", so use default conky
+        else                # Choice is "No", so use default conky
             writeDefConky
         fi
-    else    # No conkys running, use default
+    else                    # No conkys running, use default
         writeDefConky
     fi
 }
 
 function conkyRunning(){    # find running conkys
-    
+
     > "$TEMPFILE" # make blank tempfile, to save running conky paths
     pgrep -a conky | while read pid cmd;do
         if [[ ${cmd%% *} = conky ]];then
@@ -268,14 +341,14 @@ function conkyRunning(){    # find running conkys
 }
 
 function writeDefConky(){ # write default conky to saved-themes.txt and settings.cfg
-    
+
     echo "  Using default conky"
     echo "[CONKY] conky -q & sleep 1s;" >> "$SETTINGS"
     echo "Default Conky" >> "$LISTMSG"
 }
 
 function writeConkys(){  # save conky names to saved-themes.txt and settings.cfg
-    
+
     TXT="Conkys:\n\n"
     DEF="Default\n"
     MSG="Running Conkys:  "
@@ -300,24 +373,24 @@ function writeConkys(){  # save conky names to saved-themes.txt and settings.cfg
 }
 
 function checkConkyzen(){    # see if bl-conkyzen and session file present
-    
+
     if type bl-conkyzen &>/dev/null;then
-        if [ -f $CONKYSESSION ]; then
+        if [[ -f $CONKYSESSION ]]; then
             CZEN=1  # set flag for Restore choice
         fi
     fi
 }
 
 function getTint(){
-    
-    if [ "$(pidof tint2)" ];then
+
+    if [[ $(pidof tint2) ]];then
         MSG="Use running Tint2?\nIf 'No', then the default tint2rc will be used"
         DLG=$($DIALOG --form \
                 --button="No:1" $OK \
                 $IMG"dialog-question" \
                 "$T$MSG" \
                 --width=300 \
-                )
+                2>/dev/null )
         if [[ $? = 0 ]];then
             echo "  Using running tint2s"
             tintRunning
@@ -329,7 +402,7 @@ function getTint(){
 }
 
 function tintRunning(){
-    
+
     > "$TEMPFILE" # make blank tempfile, to save running tint2 paths
     pgrep -a tint2 | while read pid cmd;do
         if [[ ${cmd%% *} = tint2 ]];then
@@ -340,7 +413,7 @@ function tintRunning(){
 }
 
 function writeTint2s(){  # save tint2 names to saved-themes.txt and settings.cfg
-    
+
     TXT="Tint2s:\n\n"
     MSG="Running Tint2s:  "
     TINTCMD=""
@@ -348,7 +421,7 @@ function writeTint2s(){  # save tint2 names to saved-themes.txt and settings.cfg
     while read line;do
         TXT="$TXT$line\n"
         LINE=$(echo "$line" | sed 's/;//')
-        if [[ $LINE = tint2 ]];then # default command was used
+        if [[ $LINE = tint2 ]];then         # default command was used
             TINTCMD="$TINTCMD$LINE;"
             LISTMSGTXT="Default Tint2"
         else
@@ -362,7 +435,7 @@ function writeTint2s(){  # save tint2 names to saved-themes.txt and settings.cfg
 }
 
 function writeDefTint2(){ # write default tint2 to saved-themes.txt and settings.cfg
-    
+
     TTXT="Tint2s:\n\nDefault tint2rc\n$DASHES"
     echo "  Using default tint2"
     echo "[TINT2] $HOME/.config/tint2/tint2rc;" >> "$SETTINGS"
@@ -374,21 +447,21 @@ function killTints(){
     pgrep -a tint2 | while read pid cmd; do 
         if [[ ${cmd%% *} = tint2 ]]; then
             kill "$pid"
-        fi     
+        fi
     done
 }
 
 function checkTint2zen(){    # see if bl-tint2zen and session file present
-    
+
     if type bl-tint2zen &>/dev/null;then
-        if [ -f $TINTSESSION ]; then
-            TZEN=1  # set flag for Restore choice
+        if [[ -f $TINTSESSION ]]; then
+            TZEN=1          # set flag for Restore choice
         fi
     fi
 }
 
 function getOBtheme(){   # copy <theme> section from rc.xml to obtheme.txt
-    
+
     RCFILE="$OBPATH/rc.xml"
     tag="theme"
     sed -n "/<$tag>/,/<\/$tag>/p" "$RCFILE" > "$CONFIGDIR/obtheme.txt"
@@ -397,7 +470,7 @@ function getOBtheme(){   # copy <theme> section from rc.xml to obtheme.txt
 }
 
 function getOBname(){    # get OB theme name
-    
+
     OBFILE="$CONFIGDIR/obtheme.txt"
     OBTHEME=$(awk 'NR==2 {print;exit}' $OBFILE | awk -F'[>|<]' '{print $3}')
     TXT="Openbox theme:  $OBTHEME\n"
@@ -406,12 +479,12 @@ function getOBname(){    # get OB theme name
 }
 
 function getGTKtheme(){
-    
+
     GTKTHEMES=( "$GTK2" "$GTK2MINE" "$GTK3" "$GTK3x" )
     for f in "${GTKTHEMES[@]}";do
-        if [ -f "$f" ];then
+        if [[ -f $f ]];then
             cp "$f" "$CONFIGDIR"
-        elif [ -d "$f" ];then
+        elif [[ -d $f ]];then
             cp -r "$f" "$CONFIGDIR"
         fi
     done
@@ -420,10 +493,10 @@ function getGTKtheme(){
 }
 
 function getGTKname(){   # get GTK theme name
-    
+
     GTKFILE="$CONFIGDIR/.gtkrc-2.0"
     while read line;do
-        if [ $(echo $line | grep "gtk-theme-name" ) ] &>/dev/null;then
+        if [[ $(echo $line | grep "gtk-theme-name" ) ]] &>/dev/null;then
             GTKTHEME=$(echo $line | awk -F '"' '{print $2}')
         fi
     done < $GTKFILE
@@ -433,7 +506,7 @@ function getGTKname(){   # get GTK theme name
 }
 
 function getDmenu(){
-    
+
     if [[ -e $DPATH ]];then
         cp "$DPATH" "$CONFIGDIR"
         echo "[DMENU]" >> "$SETTINGS"
@@ -446,8 +519,8 @@ function getDmenu(){
 }
 
 function getLightdm(){
-    
-    if [ -e "$LDM" ];then
+
+    if [[ -e $LDM ]];then
         cp "$LDM" "$CONFIGDIR"
         echo "  Saved Lightdm config: $LDM"
         echo "[LIGHTDM]" >> "$SETTINGS"
@@ -457,16 +530,16 @@ function getLightdm(){
 }
 
 function ShowRootMenu(){ # Display root menu for screenshot
-    
+
     # Set mouse position, for appearance of root-menu
     screenW=$(xrandr -q | awk '/Screen/ {print $8}')
     screenH=$(xrandr -q | awk '/Screen/ {print $10}')
     screenH=${screenH%,}    
     posX=$((screenW / 4 ))
     posY=$((screenH / 5 ))
-    
+
     xdotool mousemove --sync $posX $posY 
-    
+
     # display "Menu -> Preferences" as an example
     # (Adjust the moves to display the entry you want!)
     xdotool $MOUSECMD \
@@ -478,10 +551,10 @@ function ShowRootMenu(){ # Display root menu for screenshot
 }
 
 function getScrot(){            # Get screenshot & create thumbnail
-    
+
     TMPSCROT="$CONFIGPATH/tmpscrot.tmp"
     SCROT="$CONFIGPATH/$ANS"
-    
+
     # get current desktop number
     CURRDTOP=$(xprop -root _NET_CURRENT_DESKTOP | tail -c -2)
     wmctrl -l -x > "$TMPSCROT"      # store window list in tempfile
@@ -491,7 +564,7 @@ function getScrot(){            # Get screenshot & create thumbnail
     for CONK in $(xdotool search --sync --classname "Conky");do 
         xdotool windowactivate "$CONK" 
     done
-    
+
     ShowRootMenu    # display root menu for the scrot
 
     scrot -t 15 "$SCROT.jpg"
@@ -501,7 +574,7 @@ function getScrot(){            # Get screenshot & create thumbnail
 
     # close root menu
     xdotool mousemove_relative --sync --polar 0 10 $MOUSECMD
-    
+
     while read line; do
         WINDOW=$(echo $line | awk '{print $1}') # Window_ID is first field
         DTOP=$(echo $line | awk '{print $2}' )  # Desktop number is second field
@@ -511,19 +584,19 @@ function getScrot(){            # Get screenshot & create thumbnail
     done < "$TMPSCROT"
     rm "$TMPSCROT"
     
-    echo "  Screenshot saved as: $CONFIGPATH/$ANS.jpg"
-    echo "  Screenshot thumbnail saved as: $IMGTHUMB-th.jpg"
+    echo "  Screenshot saved as: $SCROT/$ANS.jpg"
+    echo "  Screenshot thumbnail saved as: $THUMB"
 }
 
 function restoreGTK(){   # $1 is chosen saved config dir
-    
+
     GTKPATHS=( "$HOME" "$HOME" "$GTK3" "$GTK3x" )
     GTKSAVED=( "$1/$GTK2" "$1/$GTK2MINE" "$1/gtk-3.0" "$1/xfce4-notifyd.xml" )
     i=0
     for f in ${GTKSAVED[@]};do
-        if [ -e "$f" ];then     # if destination exists
-            if [ -e "${GTKPATHS[i]}" ];then
-                if [[ ${GTKSAVED[i]} = "$1/gtk-3.0" ]];then
+        if [[ -e $f ]];then     # if destination exists
+            if [[ -e ${GTKPATHS[i]} ]];then
+                if [[ ${GTKSAVED[i]} = $1/gtk-3.0 ]];then
                     cp -r ${GTKSAVED[i]}/* ${GTKPATHS[i]} # restore contents of gtk-3.0
                 fi
                 cp ${GTKSAVED[i]} ${GTKPATHS[i]}
@@ -539,7 +612,7 @@ function restoreGTK(){   # $1 is chosen saved config dir
 }
 
 function restoreOBrc(){
-    
+
     RCFILE="$OBPATH/rc.xml" 
     THEMEFILE="$1/obtheme.txt"
     FTEMP="$1/temp.txt"
@@ -565,18 +638,18 @@ function restoreOBrc(){
 }
 
 function restoreTint2(){
-    
-    echo "TINTCMD= $1"
-    echo "$1" | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$TINTSESSION" # write to tint2 session file
+
+    echo "TINTCMD= $1"       # write to tint2 session file
+    echo "$1" | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$TINTSESSION"
     killTints
     while read tintline;do
-        tint2 -c "$tintline" &
+        (tint2 -c "$tintline" &) &>/dev/null
         sleep 1s
     done < "$TINTSESSION"
 }
 
 function restoreDmenu(){
-    
+
     DFILE="$1"
     if [[ -e $DPATH ]];then        # backup dmenu-bind.sh first
         DMENUBKP="$DPATH.bkp"
@@ -589,7 +662,7 @@ function restoreDmenu(){
 }
 
 function restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
-    
+
     CMD="cp $1 $LDM"
     TXT="Authenticate restore of lightdm-gtk-greeter.conf"
     LOOP=1
@@ -607,22 +680,22 @@ function restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
                     ;;
             *   )   MSG="  Password input failed\n\nlightdm-gtk-greeter.conf was not restored"
                     echo -e "\n$MSG" 2>&1
-                    "$DIALOG" --image="dialog-warning" "$T$MSG" "$OK"
+                    "$DIALOG" --image="dialog-warning" "$T$MSG" "$OK" 2>/dev/null
                     ;;
         esac
     done
 }
 
 function cleanup(){
-    
-    if [ -d "$CONFIGDIR" ];then
+
+    if [[ -d $CONFIGDIR ]];then
         rm -rf "$CONFIGDIR"
     fi
-    if [ -d "$CONFIGDIR-BKP" ];then
+    if [[ -d $CONFIGDIR-BKP ]];then
         mv {"$CONFIGDIR-BKP","$CONFIGDIR"}
     fi
     echo -e "\n  Cancelled\n..Temporary $CONFIGDIR deleted\n"
-    exit 0
+    Intro
 }
 
 function saveSettings(){
@@ -643,8 +716,7 @@ function saveSettings(){
             $CANCEL $OK \
             --width=340 --height=300 \
             --column="Select" --column="Config" "${COLUMNS[@]}" \
-            )
-    
+            2>/dev/null )
         if [[ $? = 1 ]]; then # cancel button pressed
             cleanup
         else
@@ -653,7 +725,7 @@ function saveSettings(){
                 --text="\n  Make a selection...." \
                 $EXIT $OK \
                 --width=300 \
-                )
+                2>/dev/null )
                 if [[ $? = 1 ]];then
                     cleanup
                 fi
@@ -698,25 +770,45 @@ function saveSettings(){
         fi
     done
     TXT="<big><b><u>Openbox Configurations to be saved:</u></b></big>\n\n"
-    TXT2=$(cat $LISTMSG)
-    NEW=$($DIALOG --text="$TXT$TXT2")
+    TXT2=$(cat "$LISTMSG")
+    echo "listmsg= $TXT2"
+    NEW=$($DIALOG --text="$TXT$TXT2" 2>/dev/null)
+
     if [[ $? = 1 ]];then
         cleanup
+        restoreSettings
+    else
+        echo "$ANS" > "$CURSESSION"     # replace entry in saved config flag file
     fi
 }
 
 function ViewRestoreDialog(){  #   Display saved theme collections
-    
+
+    getSet          # get name of current set BLOB config
+    if [ $NUMDIRS -eq 0 ];then   # no saved configs; go back to Intro dialog
+        Intro
+    fi
     DLGLIST=""
+    setARR=()
+    namesARR=()
+    thumbsARR=()
+
     i=0
     for dir in "$CONFIGPATH"/* ;do
-        if [ -d "$dir" ];then
-            if [ -e "$dir/settings.cfg" ];then
-                dir=$(echo $dir | sed -e 's/ /_/g')    # replace any spaces in dir name
-                namesARR[$i]="<big>$(basename $dir)</big>" # add theme collection name to array
+        if [[ -d $dir ]];then
+            if [[ -e $dir/settings.cfg ]];then
+                d=$(echo $dir | sed -e 's/ /_/g')    # replace any spaces in dir name
+                namesARR[$i]="<big>$(basename $d)</big>" # add theme collection name to array
+                d=${d##*/}  # get directory name
+                # Get name of current session, set green=true, red=false
+                if [[ $SET = $d ]];then
+                    setARR[$i]="gtk-yes"
+                else
+                    setARR[$i]="gtk-no"
+                fi
 
                 IMGTHUMB="None"     # Placeholder if no thumbnail found
-                f="$dir/*-thumb.jpg"
+                f="$dir"/*"-thumb.jpg"
                 if [[ $f ]];then
                     IMGTHUMB="$f"
                 fi
@@ -735,7 +827,7 @@ function ViewRestoreDialog(){  #   Display saved theme collections
     done
     
     for ((j=0; j<${#namesARR[*]}; j++));do
-        DLGLIST="$DLGLIST ${namesARR[j]} ${thumbsARR[j]}"
+        DLGLIST="$DLGLIST ${setARR[j]} ${namesARR[j]} ${thumbsARR[j]}"
     done
 }
 
@@ -744,31 +836,64 @@ function restoreSettings(){
     ViewRestoreDialog
     LOOP=1
     while [[ $LOOP ]] ;do 
-        CONFIG=$($DIALOG --list --text="Double-click selection, or \"OK\" to restore settings\n" \
-            --width=460 --height=500 --center --image-preview \
+        CONFIG=$($DIALOGDEC --list --title="$TITLE" \
+            --text="Double-click selection, or \"Enter\", or \"Restore\" to restore settings\n" \
+            --separator=" " \
+            --button="Add New:3" \
+            --button="Delete:2" --button="Restore:0" --button="gtk-cancel:1" \
+            --always-print-result \
+            --width=500 --height=500 --center --image-preview \
             --expand-column=2 \
+            --column="Current:IMG" \
             --column="Saved Configuration":TEXT \
             --column="Screenshot":IMG \
             $DLGLIST \
-            )
+            2>/dev/null )
         RET=$?
-        if [[ $RET = 1 ]];then    # Cancel
-            exit 0
-        fi
         if [[ $CONFIG ]];then
             DIR=$(echo "$CONFIG" | awk -F'[>|<]' '{print $3}' )
             FPATH="$CONFIGPATH/$DIR"
-            if [[ $RET = 0 ]];then
-                SAVED="$FPATH/LISTMSG.txt"
+        fi
+        case $RET in
+            0)  SAVED="$FPATH/LISTMSG.txt"
                 TEXT="Restoring Configs saved as <big>$DIR</big>\n\n"
                 TEXT="$TEXT$(cat $SAVED)"
-                $DIALOG --center "$T$TEXT" "$CANCEL" "$OK"
-                
+                $DIALOG "$T$TEXT" "$CANCEL" "$OK" 2>/dev/null
                 if [[ $? = 0 ]];then
+                    echo $(basename $FPATH) > "$CURSESSION"
                     break
                 fi
-            fi
-        fi
+                ;;
+            1)  Intro   # Cancel
+                ;;
+            2)  TEXT="Delete saved configurations <b>$FPATH</b>\nand screenshot?"
+                $DIALOG "$T$TEXT" "$CANCEL" "$OK" 2>/dev/null 
+                if [[ $? = 0 ]];then
+                    rm -rf "$FPATH"
+                    rm "$FPATH.jpg"
+                    currentsession=$(cat $CURSESSION)
+                    fpath=$(basename $FPATH)
+                    if [ "$currentsession" = "$fpath" ];then
+                        echo "" > "$CURSESSION"
+                    fi
+                    restoreSettings
+                else
+                    continue
+                fi
+                ;;
+            3)  setName
+                saveSettings
+                getScrot
+                if [[ -d $CONFIGDIR-BKP ]];then
+                    rm -rf "$CONFIGDIR-BKP"
+                    echo -e "Temporary $CONFIGDIR deleted\n"
+                fi
+                restoreSettings
+                ;;
+            *)  echo "Unknown value returned" 2>&1
+                exit 1
+                ;;
+        esac
     done
     
     SETCFG="$FPATH/settings.cfg"
@@ -792,13 +917,14 @@ function restoreSettings(){
                                 CONKYCMD=$(echo $line | cut -d ' ' -f2-)
                                 # write to conky session file...
                                 echo $CONKYCMD | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$CONKYSESSION"
-                                killall conky; source "$CONKYSESSION"
+                                killall conky
+                                source "$CONKYSESSION"
                                 ;;
             "[GTK]"         )   restoreGTK "$FPATH"
                                 ;;
             "[OBTHEME]"     )   restoreOBrc "$FPATH"
                                 ;;
-            "[BACKGROUND]"  )   if [[ $VAL = "FEH" ]];then
+            "[BACKGROUND]"  )   if [[ $VAL = FEH ]];then
                                     cp "$FPATH/.fehbg" "$HOME"
                                     eval $(cat ~/.fehbg)
                                 else
@@ -811,10 +937,11 @@ function restoreSettings(){
             "[LIGHTDM]"     )   restoreLightdm "$FPATH/lightdm-gtk-greeter.conf"
                                 ;;
             *               )   echo "  Unknown value!" 2>&1
-                                exit 1
+                                restoreSettings
                                 ;;
         esac
     done < "$SETCFG"
+    restoreSettings
 }
 
 function reloadGTK(){ # reload gtk theme after restoring saved config
@@ -837,34 +964,10 @@ END
 # test for blobthemes config directory, create if it doesn't exist
 mkdir -p "$CONFIGPATH"
 
-# Choose Save or Restore
-INTRO=$(
-    $DIALOG $IMG$IMGPATH \
-    "$T$TXTINTRO" \
-    --button="Save:0" \
-    --button="Restore:2" \
-    $CANCEL \
-    --borders=30 \
-    )
-RET=$?
-case $RET in
-    0)  setName
-        saveSettings
-        getScrot
-        if [ -d "$CONFIGDIR-BKP" ];then
-            rm -rf "$CONFIGDIR-BKP"
-            echo -e "Temporary $CONFIGDIR deleted\n"
-        fi
-        ;;
-    1)  echo "CANCEL..."
-        exit 0
-        ;;
-    2)  restoreSettings
-        openbox --reconfigure 
-        reloadGTK
-        ;;
-    *)  echo "RETURN ERROR" 2>&1
-        ;;
-esac
-
+# create file to hold current set session name
+if [[ ! -f $CURSESSION ]];then
+    touch "$CURSESSION"
+fi
+getSet
+Intro
 exit 0
