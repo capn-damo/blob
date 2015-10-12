@@ -840,10 +840,11 @@ function restoreSettings(){
             --text="Double-click selection, or \"Enter\", or \"Restore\" to restore settings\n" \
             --separator=" " \
             --button="Add New:3" \
-            --button="Delete:2" --button="Restore:0" --button="gtk-cancel:1" \
+            --button="Delete:2" --button="Restore:0" --button="gtk-quit:1" \
             --always-print-result \
             --width=500 --height=500 --center --image-preview \
             --expand-column=2 \
+            --expand-column=3 \
             --column="Current:IMG" \
             --column="Saved Configuration":TEXT \
             --column="Screenshot":IMG \
@@ -864,7 +865,8 @@ function restoreSettings(){
                     break
                 fi
                 ;;
-            1)  Intro   # Cancel
+#            1)  Intro   # Cancel
+            1)  exit 0
                 ;;
             2)  TEXT="Delete saved configurations <b>$FPATH</b>\nand screenshot?"
                 $DIALOG "$T$TEXT" "$CANCEL" "$OK" 2>/dev/null 
@@ -969,5 +971,9 @@ if [[ ! -f $CURSESSION ]];then
     touch "$CURSESSION"
 fi
 getSet
-Intro
+if [[ $NUMDIRS = 0 ]];then
+    Intro
+else
+    restoreSettings
+fi
 exit 0
