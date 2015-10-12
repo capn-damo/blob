@@ -2,27 +2,23 @@
 
 README
 
-blobtheme : a bash script to save or restore Openbox gui configurations
-
 blobthemes: script to save or restore openbox gui configurations
 
 (Requires yad, wmctrl, xdotool, xrandr, nitrogen|feh)
 
-Written for BunsenLabs by damo <damo@bunsenlabs.org> October 2015
-
 Save options are for  Conky(s)
-                       Tint2(s)
-                       Openbox theme
-                       GTK theme
-                       Background (uses Nitrogen or feh, depending which
-                                   has the newer saved bg config file)
-                       Alt Menu (dmenu)
-                       Lightdm login gtk greeter
- 
+                      Tint2(s)
+                      Openbox theme
+                      GTK theme
+                      Background (uses Nitrogen or feh, depending which
+                                  has the newer saved bg config file)
+                      Alt Menu (dmenu)
+                      Lightdm login gtk greeter
+
 A Screenshot is saved (Windows are hidden briefly so the image
-                        is the bare desktop, with any Tint2s 
-                        or Conkys which are running, and a representive
-                        menu open)
+                       is the bare desktop, with any Tint2s 
+                       or Conkys which are running, and a representive
+                       menu open)
 
 A time-stamped backup of rc.xml is saved "just in case". 
 
