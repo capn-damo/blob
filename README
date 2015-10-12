@@ -1,24 +1,34 @@
-blob
+**blOB** - a BunsenLabs Openbox Configuration Manager
 
-"blOB" - a BunsenLabs Openbox Configuration Manager
+README
 
-blob-config : a bash script to save or restore Openbox gui configurations
+blobtheme : a bash script to save or restore Openbox gui configurations
 
-Save options are for  Conky(s)    default or current running conkys
-                      Tint2(s)    default or current running tint2s
-                      Openbox theme
-                      GTK theme
-                      Background (uses Nitrogen or feh, depending which
-                               has the newer saved bg config file)
-                      Lightdm login gtk greeter
-                      dmenu (Alt menu) 
-                      Screenshot (Windows are hidden briefly so the image
-                               is the bare desktop, with any Tint2s 
-                               or Conkys which are running)
+blobthemes: script to save or restore openbox gui configurations
 
-There is an option to view the details of any saved configurations 
+(Requires yad, wmctrl, xdotool, xrandr, nitrogen|feh)
 
-blob-config creates "~/.config/blob" to store saved configurations in
-individual directories.
-Screenshots are saved to "~/.config/blob" so they can be viewed collectively;
-the name is the same as the saved config.
+Written for BunsenLabs by damo <damo@bunsenlabs.org> October 2015
+
+Save options are for  Conky(s)
+                       Tint2(s)
+                       Openbox theme
+                       GTK theme
+                       Background (uses Nitrogen or feh, depending which
+                                   has the newer saved bg config file)
+                       Alt Menu (dmenu)
+                       Lightdm login gtk greeter
+ 
+A Screenshot is saved (Windows are hidden briefly so the image
+                        is the bare desktop, with any Tint2s 
+                        or Conkys which are running, and a representive
+                        menu open)
+
+A time-stamped backup of rc.xml is saved "just in case". 
+
+The dialog icon is "Bunsenlabs-flame-small.svg" - adjust the filepath
+to wherever it is stored ("IMGPATH" variable)
+
+xdotool is used to move the mouse pointer, and assumes Rclick is "click 3".
+If you have the right button set to something else, then adjust the 
+"MOUSECMD" variable
