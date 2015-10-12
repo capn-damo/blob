@@ -976,9 +976,9 @@ if [[ ! -f $CURSESSION ]];then
 fi
 getSet
 Intro
-#if [[ $NUMDIRS = 0 ]];then
-    #Intro
-#else
-    #restoreSettings
-#fi
+if [[ $NUMDIRS = 0 ]];then
+    Intro
+else
+    restoreSettings
+fi
 exit 0
