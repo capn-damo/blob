@@ -22,8 +22,9 @@ A Screenshot is saved (Windows are hidden briefly so the image
 
 A time-stamped backup of rc.xml is saved "just in case". 
 
-The dialog icon is "Bunsenlabs-flame-small.svg" - adjust the filepath
-to wherever it is stored ("IMGPATH" variable)
+The dialog icon is "Bunsenlabs-flame-256.svg". Put it in $HOME/.icons; or
+if you want it to display at 256x256, put it somewhere else and adjust the
+filepath to wherever it is stored ("IMGPATH" variable).
 
 xdotool is used to move the mouse pointer, and assumes Rclick is "click 3".
 If you have the right button set to something else, then adjust the 
