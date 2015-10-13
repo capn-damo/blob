@@ -148,7 +148,7 @@ function Intro(){
 
 function getSet(){      # get name of currently set BLOB config
 
-    NUMDIRS=$(find $CONFIGPATH/* -maxdepth 0 -type d | wc -l) 2>/dev/null
+    NUMDIRS=$(find $CONFIGPATH/ -maxdepth 0 -type d | wc -l) 2>/dev/null
     if [ $NUMDIRS == 0 ];then
         if [[ -f $CURSESSION ]];then
             rm $CURSESSION
