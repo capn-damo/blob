@@ -1,5 +1,6 @@
 #!/bin/bash
 #
+# Branch= conkys
 # blobthemes: script to save or restore openbox gui configurations
 #
 # (Requires yad, wmctrl, xdotool, xrandr, nitrogen|feh)
