@@ -62,8 +62,10 @@ GTK2=".gtkrc-2.0"
 GTK2MINE=".gtkrc-2.0.mine"
 GTK3="$HOME/.config/gtk-3.0"
 GTK3x="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-notifyd.xml"
-LDM="/etc/lightdm/lightdm-gtk-greeter.conf"
-DPATH="$HOME/.config/dmenu/dmenu-bind.sh"
+LDMDIR="/etc/lightdm"
+LDM="lightdm-gtk-greeter.conf"
+DMENUDIR="$HOME/.config/dmenu"
+DMENU="dmenu-bind.sh"
 PICKOBCFGS="OB menu.xml rc.xml autostart"
 PICKOB="OB theme"
 PICKGTK="GTK theme"
@@ -142,9 +144,6 @@ function Intro(){
             exit 0
             ;;
         2)  getSet
-            restoreSettings
-            openbox --reconfigure 
-            reloadGTK
             restoreSettings
             ;;
         *)  echo "RETURN ERROR" 2>&1
@@ -456,24 +455,24 @@ function getGTKname(){   # get GTK theme name
 
 function getDmenu(){
 
-    if [[ -e $DPATH ]];then
-        cp "$DPATH" "$CONFIGDIR"
+    if [[ -d $DMENUDIR ]];then
+        cp "$DMENUDIR/$DMENU" "$CONFIGDIR"
         echo "[DMENU]" >> "$SETTINGS"
-        TXT="dmenu config:  $DPATH\n"
-        echo "  Saved dmenu config: $DPATH"
+        TXT="dmenu config:  $DMENUDIR/$DMENU\n"
+        echo "  Saved dmenu config: $DMENUDIR/$DMENU"
         echo "dmenu settings" >> "$LISTMSG"
     else
-        echo "  $DPATH not found"
+        echo "  $DMENUDIR/$DMENU not found"
     fi
 }
 
 function getLightdm(){
 
-    if [[ -e $LDM ]];then
-        cp "$LDM" "$CONFIGDIR"
-        echo "  Saved Lightdm config: $LDM"
+    if [[ -f $LDMDIR/$LDM ]];then
+        cp "$LDMDIR/$LDM" "$CONFIGDIR"
+        echo "  Saved Lightdm config: $LDMDIR/$LDM"
         echo "[LIGHTDM]" >> "$SETTINGS"
-        TXT="Lightdm config:  $LDM\n"
+        TXT="Lightdm config:  $LDMDIR/$LDM\n"
         echo "LightDM settings" >> "$LISTMSG"
     fi
 }
@@ -599,19 +598,21 @@ function restoreTint2(){      # write to tint2 session file
 function restoreDmenu(){
 
     DFILE="$1"
-    if [[ -e $DPATH ]];then        # backup dmenu-bind.sh first
-        DMENUBKP="$DPATH.bkp"
-        cp "$DPATH" "$DMENUBKP"
-        echo -e "\n  $DPATH backed up and restored"
+    if [[ -e $DMENUDIR ]];then        # backup DMENU first
+        DMENUBKP="$DMENUDIR/$DMENU.bkp"
+        cp "$DMENUDIR/$DMENU" "$DMENUBKP"
+        cp "$DFILE" "$DMENUDIR"
+        echo -e "\n  $DMENUDIR/$DMENU backed up and restored"
+        echo -e "$DMENUDIR/$DMENU\n$DFILE"
     else
-        cp "$DFILE" "$DPATH"
-        echo -e "\n  $DPATH restored"
+        cp "$DFILE" "$DMENUDIR/$DMENU"
+        echo -e "\n  $DMENUDIR/$DMENU restored"
     fi
 }
 
 function restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
 
-    CMD="cp $1 $LDM"
+    CMD="cp $1 $LDMDIR/$LDM"
     TXT="Authenticate restore of lightdm-gtk-greeter.conf"
     LOOP=1
     while [[ $LOOP ]];do
@@ -888,15 +889,16 @@ function restoreSettings(){
                                     (sleep 1s && nitrogen --restore ) &
                                 fi
                                 ;;
-            "[DMENU]"       )   restoreDmenu "$FPATH/dmenu-bind.sh"
+            "[DMENU]"       )   restoreDmenu "$FPATH/$DMENU"
                                 ;;
-            "[LIGHTDM]"     )   restoreLightdm "$FPATH/lightdm-gtk-greeter.conf"
+            "[LIGHTDM]"     )   restoreLightdm "$FPATH/$LDM"
                                 ;;
             *               )   echo "  Unknown value!" 2>&1
                                 restoreSettings
                                 ;;
         esac
     done < "$SETCFG"
+    (sleep 1s && openbox --reconfigure) &
     restoreSettings
 }
 
