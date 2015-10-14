@@ -384,13 +384,13 @@ function getTint(){
     
 }
 
-function writeDefTint2(){ # write default tint2 to saved-themes.txt and settings.cfg
+#function writeDefTint2(){ # write default tint2 to saved-themes.txt and settings.cfg
 
-    TTXT="Tint2s:\n\nDefault tint2rc\n$DASHES"
-    echo "  Using default tint2"
-    echo "[TINT2] $HOME/.config/tint2/tint2rc;" >> "$SETTINGS"
-    echo "Default Tint2" >> "$LISTMSG"
-}
+    #TTXT="Tint2s:\n\nDefault tint2rc\n$DASHES"
+    #echo "  Using default tint2"
+    #echo "[TINT2] $HOME/.config/tint2/tint2rc;" >> "$SETTINGS"
+    #echo "Default Tint2" >> "$LISTMSG"
+#}
 
 function killTints(){
     
@@ -587,9 +587,8 @@ function restoreOBrc(){
     fi
 }
 
-function restoreTint2(){
+function restoreTint2(){      # write to tint2 session file
 
-    echo "TINTCMD= $1"       # write to tint2 session file
     echo "$1" | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$TINTSESSION"
     killTints
     while read tintline;do
