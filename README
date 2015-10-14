@@ -14,6 +14,10 @@ Save options are for  Conky(s)
                                   has the newer saved bg config file)
                       Alt Menu (dmenu)
                       Lightdm login gtk greeter
+                      
+It is assumed that the conkys are not being run via a script, so they will
+appear on all desktops. If you usually use a script, then you may have to
+make your own arrangements!
 
 A Screenshot is saved (Windows are hidden briefly so the image
                        is the bare desktop, with any Tint2s 
@@ -29,3 +33,8 @@ filepath to wherever it is stored ("IMGPATH" variable).
 xdotool is used to move the mouse pointer, and assumes Rclick is "click 3".
 If you have the right button set to something else, then adjust the 
 "MOUSECMD" variable
+
+************************************************************************
+
+# TODO:
+# Deal with per-desktop conky situations;
