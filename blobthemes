@@ -1,6 +1,5 @@
 #!/bin/bash
 #
-# Branch= conkys
 # blobthemes: script to save or restore openbox gui configurations
 #
 # (Requires yad, wmctrl, xdotool, nitrogen|feh)
@@ -36,18 +35,15 @@
 #### VARIABLES #########################################################
 CONFIGPATH="$HOME/.config/blob"
 SETTINGS=""
-TEMPFILE="$HOME/tempfile.tmp"
+TEMPFILE="$HOME/blob.tmp"
 OBPATH="$HOME/.config/openbox"
 CURSESSION="$CONFIGPATH/current"
 CONFIGDIR=""
 LISTMSG=""
-SCROT=0
 CZEN=0
 TZEN=0
 NUMDIRS=0
 CONKYCMD=""
-CONKYSPECIAL=""
-CONKYSPECFILE="$CONFIGPATH/conkycmd"
 ### CONFIGS VARIABLES
 FEHFILE="$HOME/.fehbg"
 NITRODIR="$HOME/.config/nitrogen"
@@ -315,7 +311,7 @@ function getConky(){
     TXT=""
     if [[ $(pidof conky) ]];then    # get full command of running conkys
         > "$TEMPFILE"
-        pgrep -a conky | cut -d " " -f2- | while read CMD;do
+        pgrep -a conky | while read pid CMD;do
             echo "$CMD;" >> "$TEMPFILE"
         done
 
@@ -359,26 +355,6 @@ function checkConkyzen(){    # see if bl-conkyzen and session file present
 
 function getTint(){
 
-    if [[ $(pidof tint2) ]];then
-        MSG="Use running Tint2?\nIf 'No', then the default tint2rc will be used"
-        DLG=$($DIALOG --form \
-                --button="No:1" $OK \
-                $IMG"dialog-question" \
-                "$T$MSG" \
-                --width=300 \
-                2>/dev/null )
-        if [[ $? = 0 ]];then
-            echo "  Using running tint2s"
-            tintRunning
-            writeTint2s
-        else
-            writeDefTint2   # Choice is "No", so use default tint2
-        fi
-    fi
-}
-
-function tintRunning(){
-
     > "$TEMPFILE" # make blank tempfile, to save running tint2 paths
     pgrep -a tint2 | while read pid cmd;do
         if [[ ${cmd%% *} = tint2 ]];then
@@ -386,10 +362,7 @@ function tintRunning(){
             echo "$TPATH;" >> "$TEMPFILE"
         fi
     done
-}
-
-function writeTint2s(){  # save tint2 names to saved-themes.txt and settings.cfg
-
+    
     TXT="Tint2s:\n\n"
     MSG="Running Tint2s:  "
     TINTCMD=""
@@ -399,7 +372,7 @@ function writeTint2s(){  # save tint2 names to saved-themes.txt and settings.cfg
         LINE=$(echo "$line" | sed 's/;//')
         if [[ $LINE = tint2 ]];then         # default command was used
             TINTCMD="$TINTCMD$LINE;"
-            LISTMSGTXT="Default Tint2"
+            LISTMSGTXT="$LISTMSGTXT\n\tDefault Tint2"
         else
             TINTCMD="$TINTCMD$LINE;"
             LISTMSGTXT="$LISTMSGTXT\n\t$LINE"
@@ -408,6 +381,7 @@ function writeTint2s(){  # save tint2 names to saved-themes.txt and settings.cfg
     echo "[TINT2] $TINTCMD" >> "$SETTINGS"
     rm "$TEMPFILE"
     echo "$MSG$LISTMSGTXT" >> "$LISTMSG"
+    
 }
 
 function writeDefTint2(){ # write default tint2 to saved-themes.txt and settings.cfg
@@ -763,7 +737,7 @@ function saveSettings(){
 
 function ViewRestoreDialog(){  #   Display saved theme collections
 
-    getSet          # get name of current set BLOB config
+    getSet          # get name of latest set BLOB config
     if [ $NUMDIRS -eq 0 ];then   # no saved configs; go back to Intro dialog
         Intro
     fi
@@ -779,7 +753,7 @@ function ViewRestoreDialog(){  #   Display saved theme collections
                 d=$(echo $dir | sed -e 's/ /_/g')    # replace any spaces in dir name
                 namesARR[$i]="<big>$(basename $d)</big>" # add theme collection name to array
                 d=${d##*/}  # get directory name
-                # Get name of current session, set green=true, red=false
+                # Get name of current session, set icon for TRUE/FALSE
                 if [[ $SET = $d ]];then
                     setARR[$i]="gtk-yes"
                 else
@@ -824,8 +798,8 @@ function restoreSettings(){
             --width=500 --height=500 --center --image-preview \
             --expand-column=2 \
             --expand-column=3 \
-            --column="Current:IMG" \
-            --column="Saved Configuration":TEXT \
+            --column="Last Saved:IMG" \
+            --column="Config Name":TEXT \
             --column="Screenshot":IMG \
             $DLGLIST \
             2>/dev/null )
@@ -888,14 +862,14 @@ function restoreSettings(){
         VAL=$(echo $line | awk '{print $2}')
         case "$TAG" in
             "[TINT2]"       )   checkTint2zen # see if bl-tint2zen installed
-                                if [[ $TZEN ]];then
+                                if (( $TZEN == 1 ));then
                                     > "$TINTSESSION" # overwrite tint2 session file
                                 fi
                                 TINTCMD=$(echo $line | cut -d ' ' -f2-)
                                 restoreTint2 "$TINTCMD"
                                 ;;
             "[CONKY]"       )   checkConkyzen # see if bl-conkyzen installed
-                                if [[ $CZEN ]];then
+                                if (( $CZEN == 1 ));then
                                     > "$CONKYSESSION" # overwrite conky session file
                                 fi
                                 CONKYCMD=$(echo $line | cut -d ' ' -f2-)
@@ -948,7 +922,7 @@ END
 # test for blobthemes config directory, create if it doesn't exist
 mkdir -p "$CONFIGPATH"
 
-# create file to hold current set session name
+# create file to hold most recent saved configuration name
 if [[ ! -f $CURSESSION ]];then
     touch "$CURSESSION"
 fi
