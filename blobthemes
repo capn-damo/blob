@@ -46,6 +46,8 @@ CZEN=0
 TZEN=0
 NUMDIRS=0
 CONKYCMD=""
+CONKYSPECIAL=""
+CONKYSPECFILE="$CONFIGPATH/conkycmd"
 ### CONFIGS VARIABLES
 FEHFILE="$HOME/.fehbg"
 NITRODIR="$HOME/.config/nitrogen"
@@ -308,71 +310,39 @@ function getNitrogen(){  # get Nitrogen saved backgrounds
 
 function getConky(){
 
-    if [[ $(pidof conky) ]];then
-        MSG="Use running conkys?\nIf 'No', then the default conkyrc will be used"
-        DLG=$($DIALOG --form \
-                --button="No:1" $OK \
-                --image="dialog-question" \
-                "$T$MSG" \
-                --width=300 \
-                2>/dev/null )
-        if [[ $? = 0 ]];then
-            echo "  Using running conkys"
-            conkyRunning
-            writeConkys
-        else                # Choice is "No", so use default conky
-            writeDefConky
-        fi
-    else                    # No conkys running, use default
-        writeDefConky
-    fi
-}
-
-function conkyRunning(){    # find running conkys
-
-    > "$TEMPFILE" # make blank tempfile, to save running conky paths
-    pgrep -a conky | while read pid cmd;do
-        if [[ ${cmd%% *} = conky ]];then
-            if [[ $cmd = "conky -q" ]];then   # conky -q was used
-                echo "$cmd;" >> "$TEMPFILE"
-            else
-                CPATH=$(echo "$cmd" | awk '{print $NF}')
-                echo "$CPATH;" >> "$TEMPFILE"
-            fi
-        fi
-    done
-}
-
-function writeDefConky(){ # write default conky to saved-themes.txt and settings.cfg
-
-    echo "  Using default conky"
-    echo "[CONKY] conky -q & sleep 1s;" >> "$SETTINGS"
-    echo "Default Conky" >> "$LISTMSG"
-}
-
-function writeConkys(){  # save conky names to saved-themes.txt and settings.cfg
-
-    TXT="Conkys:\n\n"
-    DEF="Default\n"
-    MSG="Running Conkys:  "
     CONKYCMD=""
     LISTMSGTXT=""
-    while read line;do
-        LINE=$(echo "$line" | sed 's/;//')
-        # test if default conky was used
-        if [[ $LINE = "conky -q" ]];then
-            CONKYCMD="$CONKYCMD conky -q & sleep 1s;"
-            TXT="$TXT$DEF"
-            LISTMSGTXT="Default Conky"
-        else
-            CONKYCMD="$CONKYCMD conky -c $LINE & sleep 1s;"
+    TXT=""
+    if [[ $(pidof conky) ]];then    # get full command of running conkys
+        wmctrl -l | grep Conky | while read line;do
+            ID=${line%%" "*}
+            CMD=$(xprop -id $ID  WM_COMMAND | grep -o '".*"' | sed 's/["|,]//g') 
+            echo "$CMD;" > "$TEMPFILE"
+        done
+
+        TXT="Conkys:\n\n"
+        DEF="Default\n"
+        MSG="Running Conkys:  "
+
+        while read line;do
+            LINE=$(echo "$line" | sed 's/;//')
+            CONKYCMD="$CONKYCMD $LINE & sleep 1s;"
+            line=${line##*" "}      # get full filepath
             TXT="$TXT$line\n"
             LISTMSGTXT="$LISTMSGTXT\n\t$line"
-        fi
-    done < "$TEMPFILE"
-    echo "[CONKY] $CONKYCMD" >> "$SETTINGS"
-    rm "$TEMPFILE"
-    echo "$MSG$LISTMSGTXT" >> "$LISTMSG"
+        done < "$TEMPFILE"
+        echo "[CONKY] $CONKYCMD" >> "$SETTINGS"
+
+        rm "$TEMPFILE"
+        echo "$MSG$LISTMSGTXT" >> "$LISTMSG"
+    else
+        $DIALOG --form --image="dialog-warning" \
+        --text="You selected to save Conkys\nbut none are running" \
+        "$OK" \
+        --width=300 \
+        2>/dev/null
+        cleanup save
+    fi
 }
 
 function checkConkyzen(){    # see if bl-conkyzen and session file present
@@ -564,7 +534,7 @@ function getScrot(){            # Get screenshot & create thumbnail
     wmctrl -k on                    # hide windows, show desktop
 
     # show any conkys which have been hidden by wmctrl, (ie not own_window_type desktop)
-    for CONK in $(xdotool search --sync --classname "Conky");do 
+    for CONK in $(xdotool search --classname "Conky");do 
         xdotool windowactivate "$CONK" 
     done
 
@@ -698,7 +668,11 @@ function cleanup(){
         mv {"$CONFIGDIR-BKP","$CONFIGDIR"}
     fi
     echo -e "\n  Cancelled\n..Temporary $CONFIGDIR deleted\n"
-    Intro
+    if [[ $1 = save ]];then
+        saveSettings
+    else
+        Intro
+    fi
 }
 
 function saveSettings(){
