@@ -1,6 +1,5 @@
 #!/bin/bash
 #
-# Branch= conkys
 # blobthemes: script to save or restore openbox gui configurations
 #
 # (Requires yad, wmctrl, xdotool, nitrogen|feh)
@@ -315,7 +314,7 @@ function getConky(){
     TXT=""
     if [[ $(pidof conky) ]];then    # get full command of running conkys
         > "$TEMPFILE"
-        pgrep -a conky | cut -d " " -f2- | while read CMD;do
+        pgrep -a conky | while read pid CMD;do
             echo "$CMD;" >> "$TEMPFILE"
         done
 
@@ -359,26 +358,6 @@ function checkConkyzen(){    # see if bl-conkyzen and session file present
 
 function getTint(){
 
-    if [[ $(pidof tint2) ]];then
-        MSG="Use running Tint2?\nIf 'No', then the default tint2rc will be used"
-        DLG=$($DIALOG --form \
-                --button="No:1" $OK \
-                $IMG"dialog-question" \
-                "$T$MSG" \
-                --width=300 \
-                2>/dev/null )
-        if [[ $? = 0 ]];then
-            echo "  Using running tint2s"
-            tintRunning
-            writeTint2s
-        else
-            writeDefTint2   # Choice is "No", so use default tint2
-        fi
-    fi
-}
-
-function tintRunning(){
-
     > "$TEMPFILE" # make blank tempfile, to save running tint2 paths
     pgrep -a tint2 | while read pid cmd;do
         if [[ ${cmd%% *} = tint2 ]];then
@@ -386,10 +365,7 @@ function tintRunning(){
             echo "$TPATH;" >> "$TEMPFILE"
         fi
     done
-}
-
-function writeTint2s(){  # save tint2 names to saved-themes.txt and settings.cfg
-
+    
     TXT="Tint2s:\n\n"
     MSG="Running Tint2s:  "
     TINTCMD=""
@@ -399,7 +375,7 @@ function writeTint2s(){  # save tint2 names to saved-themes.txt and settings.cfg
         LINE=$(echo "$line" | sed 's/;//')
         if [[ $LINE = tint2 ]];then         # default command was used
             TINTCMD="$TINTCMD$LINE;"
-            LISTMSGTXT="Default Tint2"
+            LISTMSGTXT="$LISTMSGTXT\n\tDefault Tint2"
         else
             TINTCMD="$TINTCMD$LINE;"
             LISTMSGTXT="$LISTMSGTXT\n\t$LINE"
@@ -408,6 +384,7 @@ function writeTint2s(){  # save tint2 names to saved-themes.txt and settings.cfg
     echo "[TINT2] $TINTCMD" >> "$SETTINGS"
     rm "$TEMPFILE"
     echo "$MSG$LISTMSGTXT" >> "$LISTMSG"
+    
 }
 
 function writeDefTint2(){ # write default tint2 to saved-themes.txt and settings.cfg
