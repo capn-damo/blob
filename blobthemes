@@ -3,7 +3,7 @@
 # Branch= conkys
 # blobthemes: script to save or restore openbox gui configurations
 #
-# (Requires yad, wmctrl, xdotool, xrandr, nitrogen|feh)
+# (Requires yad, wmctrl, xdotool, nitrogen|feh)
 #
 # Written for BunsenLabs by damo <damo@bunsenlabs.org> October 2015
 #
@@ -153,11 +153,11 @@ function getSet(){      # get name of currently set BLOB config
 
     NUMDIRS=0
     NUMDIRS=$(ls -l "$CONFIGPATH" | grep -c ^d) # check if any dirs present
-    if [ $NUMDIRS == 0 ];then
+    if (( $NUMDIRS == 0 ));then
         if [[ -f $CURSESSION ]];then
             rm $CURSESSION
         fi
-    elif [ $NUMDIRS -gt 0 ] && [[ -f $CURSESSION ]];then
+    elif [[ $NUMDIRS -gt 0 ]] && [[ -f $CURSESSION ]];then
         SET=$(cat $CURSESSION)
     fi
 }
@@ -314,20 +314,23 @@ function getConky(){
     LISTMSGTXT=""
     TXT=""
     if [[ $(pidof conky) ]];then    # get full command of running conkys
-        wmctrl -l | grep Conky | while read line;do
-            ID=${line%%" "*}
-            CMD=$(xprop -id $ID  WM_COMMAND | grep -o '".*"' | sed 's/["|,]//g') 
-            echo "$CMD;" > "$TEMPFILE"
+        > "$TEMPFILE"
+        pgrep -a conky | cut -d " " -f2- | while read CMD;do
+            echo "$CMD;" >> "$TEMPFILE"
         done
 
         TXT="Conkys:\n\n"
-        DEF="Default\n"
+        DEF="Default"
         MSG="Running Conkys:  "
 
         while read line;do
             LINE=$(echo "$line" | sed 's/;//')
             CONKYCMD="$CONKYCMD $LINE & sleep 1s;"
-            line=${line##*" "}      # get full filepath
+            if [[ $LINE = "conky" ]] || [[ $LINE = "conky -q" ]];then
+                line="$DEF"
+            else
+                line=${line##*" "}      # get full filepath
+            fi
             TXT="$TXT$line\n"
             LISTMSGTXT="$LISTMSGTXT\n\t$line"
         done < "$TEMPFILE"
@@ -748,11 +751,10 @@ function saveSettings(){
     done
     TXT="<big><b><u>Openbox Configurations to be saved:</u></b></big>\n\n"
     TXT2=$(cat "$LISTMSG")
-    echo "listmsg= $TXT2"
     NEW=$($DIALOG --text="$TXT$TXT2" 2>/dev/null)
 
     if [[ $? = 1 ]];then
-        cleanup
+        cleanup save
         restoreSettings
     else
         echo "$ANS" > "$CURSESSION"     # replace entry in saved config flag file
@@ -951,8 +953,7 @@ if [[ ! -f $CURSESSION ]];then
     touch "$CURSESSION"
 fi
 getSet
-Intro
-if [[ $NUMDIRS = 0 ]];then
+if (( $NUMDIRS == 0 ));then
     Intro
 else
     restoreSettings
