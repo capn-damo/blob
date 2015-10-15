@@ -797,7 +797,7 @@ function restoreSettings(){
             --width=500 --height=500 --center --image-preview \
             --expand-column=2 \
             --expand-column=3 \
-            --column="Last Saved:IMG" \
+            --column="Last Set:IMG" \
             --column="Config Name":TEXT \
             --column="Screenshot":IMG \
             $DLGLIST \
