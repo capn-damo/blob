@@ -42,7 +42,7 @@
 # TODO:
 # Deal with per-desktop conky situations;
 # Adjust dialog width for dual screens
-# 
+#
 #### VARIABLES #########################################################
 CONFIGPATH="$HOME/.config/blob"
 SETTINGS=""
@@ -92,8 +92,6 @@ OK="--button=OK:0"
 CANCEL="--button=gtk-cancel:1"
 EXIT="--button=gtk-quit:1"
 CLOSE="--button=gtk-close:1"
-#DLGWIDTH="--width="
-#DLGHEIGHT="--height="
 TXTINTRO="\n\n<big><b>BunsenLabs\n\nOpenbox Configuration Manager</b></big>\n\n\n \
 <b>Save or Restore settings for:</b>\n\n \
 \t\tOpenbox theme\n \
@@ -176,11 +174,6 @@ function countMonitors(){ #test for more than 2 monitors connected.
     PRIMARY=$(xrandr -q | awk '/ connected/ {if ($3=="primary") print $4}')
     PSIZE=${PRIMARY%%x*}    # Primary monitor width
     case $MON in
-        #1|2 )   getScreenDims $MON $PSIZE
-                #;;
-        #3 )     W=1200  # Can't deal with more than 2 monitors
-                #H=600
-                #;;
         1|2|3)  getScreenDims $MON $PSIZE
                 ;;
         * )     W=600
@@ -408,7 +401,7 @@ function getTint(){
             echo "$TPATH;" >> "$TEMPFILE"
         fi
     done
-    
+
     TXT="Tint2s:\n\n"
     MSG="Running Tint2s:  "
     TINTCMD=""
@@ -538,7 +531,7 @@ function ShowRootMenu(){ # Display root menu for screenshot
     xdotool key Down key Down key Down key Down key Down key Down \
     key Down key Down key Down key Down key Down key Down \
     key Down key Down && \
-    
+
     xdotool key Right && sleep 0.2
     }
 
@@ -575,7 +568,7 @@ function getScrot(){            # Get screenshot & create thumbnail
         fi
     done < "$TMPSCROT"
     rm "$TMPSCROT"
-    
+
     echo "  Screenshot saved as: $SCROT/$ANS.jpg"
     echo "  Screenshot thumbnail saved as: $THUMB"
 }
@@ -696,7 +689,7 @@ function cleanup(){
 }
 
 function saveSettings(){
-    
+
     COLUMNS=(\
         "FALSE" "$PICKOB" \
         "FALSE" "$PICKGTK" \
@@ -821,7 +814,7 @@ function ViewRestoreDialog(){  #   Display saved theme collections
             i=$(($i+1))
         fi
     done
-    
+
     for ((j=0; j<${#namesARR[*]}; j++));do
         DLGLIST="$DLGLIST ${setARR[j]} ${namesARR[j]} ${thumbsARR[j]}"
     done
@@ -895,7 +888,7 @@ function restoreSettings(){
                 ;;
         esac
     done
-    
+
     SETCFG="$FPATH/settings.cfg"
 
     # Get chosen saved configs and restore them
@@ -946,7 +939,7 @@ function restoreSettings(){
 }
 
 function reloadGTK(){ # reload gtk theme after restoring saved config
-    
+
 python - <<END
 import gtk
 
@@ -956,7 +949,7 @@ events.data_format=8
 events.send_event=True
 events.message_type=data
 events.send_clientmessage_toall()
-    
+
 END
 }
 
