@@ -171,6 +171,7 @@ function getSet(){      # get name of currently set BLOB config
 }
 
 function countMonitors(){ #test for more than 2 monitors connected.
+
     MON=$(xrandr -q | grep -c " connected")
     case $MON in
         1|2 )   getScreenDims $MON
@@ -186,22 +187,13 @@ function countMonitors(){ #test for more than 2 monitors connected.
 }
 
 function getScreenDims(){   # Set width and height for View dialog
-    
+
     desktopW=$(xrandr -q | awk '/Screen/ {print $8}')  # total desktop width
     desktopH=$(xrandr -q | awk '/Screen/ {print $10}') # desktop height
     desktopH=${desktopH%%,*}    # remove trailing comma
-    
+
     if (( $1 == 2 ));then
-        # Get monitors geometry and position ( w x h x offset_x offset_y )
-        MONS=$(echo $(xrandr -q | awk '/ connected/ {if ($3=="primary") print $4; else print $3}'))
-        read monA monB <<< "$MONS"
-    
-        monA=$(echo $monA | awk -F "+" '{print $2}') 
-        monB=$(echo $monB | awk -F "+" '{print $2}')
-        
-        if (( $monA == $monB ));then
-            W=$(( $desktopW / 6 ))
-        fi
+        W=$(( $desktopW / 6 ))  # one sixth width
     else
         W=$(( $desktopW / 3 ))  # one third width
     fi
@@ -526,21 +518,25 @@ function ShowRootMenu(){ # Display root menu for screenshot
     # Set mouse position, for appearance of root-menu
     screenW=$(xrandr -q | awk '/Screen/ {print $8}')
     screenH=$(xrandr -q | awk '/Screen/ {print $10}')
-    screenH=${screenH%,}    
-    posX=$((screenW / 4 ))
+    screenH=${screenH%,}
+    if (( $MON == 1 ));then
+        posX=$((screenW / 4 ))
+    else
+        posX=$((screenW / 6 ))
+    fi
     posY=$((screenH / 5 ))
 
     xdotool mousemove --sync $posX $posY 
 
     # display "Menu -> Preferences" as an example
     # (Adjust the moves to display the entry you want!)
-    xdotool $MOUSECMD \
+    xdotool $MOUSECMD && \
+    xdotool key Down key Down key Down key Down key Down key Down \
     key Down key Down key Down key Down key Down key Down \
-    key Down key Down key Down key Down key Down key Down \
-    key Down key Down && sleep 0.1
+    key Down key Down && \
     
     xdotool key Right && sleep 0.2
-}
+    }
 
 function getScrot(){            # Get screenshot & create thumbnail
 
@@ -559,7 +555,7 @@ function getScrot(){            # Get screenshot & create thumbnail
 
     ShowRootMenu    # display root menu for the scrot
 
-    scrot -t 12 "$SCROT.jpg"    # scrot thumbnail @12% fulsize
+    scrot -t 9 "$SCROT.jpg"    # scrot thumbnail @9% fulsize
 
     THUMB=$(find $CONFIGPATH -maxdepth 1 -type f -name "*-thumb.jpg" 2>/dev/null)
     mv $THUMB $CONFIGDIR
@@ -839,7 +835,6 @@ function restoreSettings(){
             --button="Delete:2" --button="Restore:0" --button="gtk-quit:1" \
             --always-print-result \
             --width=$W --height=$H --center --image-preview \
-            --expand-column=2 \
             --expand-column=3 \
             --column="Last Set:IMG" \
             --column="Config Name":TEXT \
@@ -890,7 +885,7 @@ function restoreSettings(){
             *)  if [[ $RET = 252 ]];then
                     echo "Exited with \"ESC\" key"
                 else
-                    echo "Exiting with error..." 2>&1
+                    echo "Error= $RET" 2>&1
                 fi
                 exit 1
                 ;;
