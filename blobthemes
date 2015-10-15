@@ -176,15 +176,17 @@ function countMonitors(){ #test for more than 2 monitors connected.
     PRIMARY=$(xrandr -q | awk '/ connected/ {if ($3=="primary") print $4}')
     PSIZE=${PRIMARY%%x*}    # Primary monitor width
     case $MON in
-        1|2 )   getScreenDims $MON $PSIZE
-                ;;
-        3 )     W=1200  # Can't deal with more than 2 monitors
-                H=600
+        #1|2 )   getScreenDims $MON $PSIZE
+                #;;
+        #3 )     W=1200  # Can't deal with more than 2 monitors
+                #H=600
+                #;;
+        1|2|3)  getScreenDims $MON $PSIZE
                 ;;
         * )     W=600
                 H=600
                 echo -e "Script cannot deal with these monitors.\
-                Setting dialog width = 600" >&2
+                Setting dialog width height = 600 x 600" >&2
     esac
 }
 
@@ -194,10 +196,10 @@ function getScreenDims(){   # Set width and height for View dialog
     desktopH=$(xrandr -q | awk '/Screen/ {print $10}') # desktop height
     desktopH=${desktopH%%,*}    # remove trailing comma
 
-    if (( $1 == 2 ));then
-        W=$(( $2 / 3 ))  # 1/3 width primary monitor
-    else
+    if (( $1 == 1 ));then
         W=$(( $desktopW / 3 ))  # 1/3 width
+    else
+        W=$(( $2 / 3 ))  # 1/3 width primary monitor
     fi
     H=$(( ($desktopH / 3)*2 ))  # 2/3 height
 }
