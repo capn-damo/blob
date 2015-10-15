@@ -929,7 +929,7 @@ function restoreSettings(){
                                     eval $(cat ~/.fehbg)
                                 else
                                     cp "$FPATH/bg-saved.cfg" "$NITRODIR"
-                                    (sleep 1s && nitrogen --restore ) &
+                                    nitrogen --restore
                                 fi
                                 ;;
             "[DMENU]"       )   restoreDmenu "$FPATH/$DMENU"
