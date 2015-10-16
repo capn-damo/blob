@@ -137,14 +137,14 @@ function Intro(){
             getScrot
             if [[ -d $CONFIGDIR-BKP ]];then
                 rm -rf "$CONFIGDIR-BKP"
-                echo -e "Temporary $CONFIGDIR deleted\n"
+                echo -e "\n  Temporary $CONFIGDIR deleted\n"
             fi
             $DIALOG --text="Settings were saved as <b>$ANS</b>" --image="gtk-save" "$OK"
             if [[ $? ]];then
                 restoreSettings
             fi
             ;;
-        1)  echo "CANCEL..."
+        1)  echo "CANCELLED..."
             exit 0
             ;;
         2)  getSet
@@ -178,8 +178,8 @@ function countMonitors(){ #test for more than 2 monitors connected.
                 ;;
         * )     W=600
                 H=600
-                echo -e "Script cannot deal with these monitors.\
-                Setting dialog width height = 600 x 600" >&2
+                echo -e "\n  Script cannot deal with these monitors.\
+                \n  Setting dialog width height = 600 x 600" 2>&1
     esac
 }
 
@@ -218,7 +218,7 @@ function setName(){  # set name of collection, make dir and session settings fil
             2>/dev/null
 
             RET=$?
-            echo "  No name entered for new collection!" 2>&1
+            echo -e "\n  No name entered for new collection!" 2>&1
             if [[ $RET = 0 ]];then
                 continue
             else
@@ -228,7 +228,7 @@ function setName(){  # set name of collection, make dir and session settings fil
             ANS=$(echo $ANS | sed -e 's/ /_/g')    # replace any spaces in dir name
             CONFIGDIR="$CONFIGPATH/$ANS" 
             if [[ -d $CONFIGDIR ]];then
-                echo "  $CONFIGDIR already exists"
+                echo -e "\n  $CONFIGDIR already exists"
 
                 $DIALOG --form --image="dialog-question" \
                 --text="Overwrite existing saved session?" \
@@ -264,10 +264,10 @@ function setName(){  # set name of collection, make dir and session settings fil
     else
         TXT=""
     fi
-    echo "  Configuration will be saved as: $ANS$TXT"
+    echo -e "\n  Configuration will be saved as: $ANS$TXT"
 
     # Store list in listfile
-    echo "Configuration name: <b>$ANS</b>\t$TXT\nSaved at $TIME\n" >> "$LISTMSG"
+    echo -e "<b>Configuration name: $ANS</b>\t$TXT\nSaved at $TIME\n" >> "$LISTMSG"
 }
 
 function getBg(){    # find if feh or nitrogen was used. Save config file(s)
@@ -283,27 +283,27 @@ function getBg(){    # find if feh or nitrogen was used. Save config file(s)
     elif [[ -e $NITROFILE ]] &&  [[ ! -e $FEHFILE ]];then    # use nitrogen for background
         BGSET="NITROGEN"
     else
-        echo "  No background-setting application found" 2>&1
+        echo -e "\n  No background-setting application found" 2>&1
         BGSET="None"
     fi
-    echo "  Background to be set with $BGSET"
+    echo -e "\n  Background to be set with $BGSET"
 
     case "$BGSET" in
         FEH     )   echo "[BACKGROUND] $BGSET" >> "$SETTINGS"
                     cp "$FEHFILE" "$CONFIGDIR"
-                    echo "  $FEHFILE copied"
+                    echo -e "\n  $FEHFILE copied"
                     bgFeh
                     ;;
         NITROGEN)   echo "[BACKGROUND] $BGSET" >> "$SETTINGS"
                     cp "$NITRODIR/nitrogen.cfg" "$CONFIGDIR"
                     cp "$NITROFILE" "$CONFIGDIR"
-                    echo "  Saved Nitrogen file: $NITROFILE"
+                    echo -e "\n  Saved Nitrogen file: $NITROFILE"
                     getNitrogen
                     ;;
-        None    )   echo "  No background-setting application found" 2>&1
+        None    )   echo -e "\n  No background-setting application found" 2>&1
                     echo "[BACKGROUND] $BGSET" >> "$SETTINGS"
                     ;;
-        *       )   echo "  ERROR: No background config found" 2>&1
+        *       )   echo -e "\n  ERROR: No background config found" 2>&1
                     exit 1
                     ;;
     esac
@@ -318,10 +318,11 @@ function bgFeh(){    # get Feh saved backgrounds
         for F in $(grep -o "'.*'" $FFILE | sed "s/'//g" 2>/dev/null);do
             BG="$BG$F;\n"
         done
-        TXT="Backgrounds set with Feh, using $FEHFILE\n\n$BG"
+        echo -e "\n  Backgrounds set with Feh, using:\n\
+        \t$FEHFILE\n\t$BG"
         echo "Background set with feh:\n\t$BG$F" >> "$LISTMSG"
     else
-        echo "  $FFILE not found" 2>&1
+        echo "\n  $FFILE not found" 2>&1
     fi
 }
 
@@ -336,10 +337,11 @@ function getNitrogen(){  # get Nitrogen saved backgrounds
                 BG="$BG$BGLINE;\n"
             fi
         done < "$NFILE"
-        TXT="Backgrounds set with Nitrogen, using $NITROFILE\n\n$BG"
+        echo -e "\n  Backgrounds set with Nitrogen, using:\n\
+        \t$NITROFILE\n\t$BG"
         echo "Background set with nitrogen:\n\t$BG" >> "$LISTMSG"
     else
-        echo "  $NFILE not found" 2>&1
+        echo "\n  $NFILE not found" 2>&1
     fi
 }
 
@@ -356,7 +358,7 @@ function getConky(){
 
         TXT="Conkys:\n\n"
         DEF="Default"
-        MSG="Running Conkys:  "
+        MSG="Running Conkys:"
 
         while read line;do
             LINE=$(echo "$line" | sed 's/;//')
@@ -366,13 +368,13 @@ function getConky(){
             else
                 line=${line##*" "}      # get full filepath
             fi
-            TXT="$TXT$line\n"
+            TXT="$TXT$line"
             LISTMSGTXT="$LISTMSGTXT\n\t$line"
         done < "$TEMPFILE"
         echo "[CONKY] $CONKYCMD" >> "$SETTINGS"
 
         rm "$TEMPFILE"
-        echo "$MSG$LISTMSGTXT" >> "$LISTMSG"
+        echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
     else
         $DIALOG --form --image="dialog-warning" \
         --text="You selected to save Conkys\nbut none are running" \
@@ -403,11 +405,11 @@ function getTint(){
     done
 
     TXT="Tint2s:\n\n"
-    MSG="Running Tint2s:  "
+    MSG="Running Tint2s:"
     TINTCMD=""
     LISTMSGTXT=""
     while read line;do
-        TXT="$TXT$line\n"
+        TXT="$TXT$line"
         LINE=$(echo "$line" | sed 's/;//')
         if [[ $LINE = tint2 ]];then         # default command was used
             TINTCMD="$TINTCMD$LINE;"
@@ -419,7 +421,7 @@ function getTint(){
     done < "$TEMPFILE"
     echo "[TINT2] $TINTCMD" >> "$SETTINGS"
     rm "$TEMPFILE"
-    echo "$MSG$LISTMSGTXT" >> "$LISTMSG"
+    echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
     
 }
 
@@ -455,8 +457,8 @@ function getOBname(){    # get OB theme name
     OBFILE="$CONFIGDIR/obtheme.txt"
     OBTHEME=$(awk 'NR==2 {print;exit}' $OBFILE | awk -F'[>|<]' '{print $3}')
     TXT="Openbox theme:  $OBTHEME\n"
-    echo "  Saved Openbox theme: $OBTHEME"
-    echo "Openbox theme: $OBTHEME" >> "$LISTMSG"
+    echo -e "\n  Saved $TXT"
+    echo "$TXT" >> "$LISTMSG"
 }
 
 function getGTKtheme(){
@@ -482,8 +484,8 @@ function getGTKname(){   # get GTK theme name
         fi
     done < $GTKFILE
     TXT="GTK theme:  $GTKTHEME\n"
-    echo "  Saved GTK theme: $GTKTHEME"
-    echo "GTK theme: $GTKTHEME" >> "$LISTMSG"
+    echo -e "\n  Saved $TXT"
+    echo "$TXT" >> "$LISTMSG"
 }
 
 function getDmenu(){
@@ -492,8 +494,8 @@ function getDmenu(){
         cp "$DMENUDIR/$DMENU" "$CONFIGDIR"
         echo "[DMENU]" >> "$SETTINGS"
         TXT="dmenu config:  $DMENUDIR/$DMENU\n"
-        echo "  Saved dmenu config: $DMENUDIR/$DMENU"
-        echo "dmenu settings" >> "$LISTMSG"
+        echo -e "\n  Saved $TXT"
+        echo "$TXT" >> "$LISTMSG"
     else
         echo "  $DMENUDIR/$DMENU not found"
     fi
@@ -503,10 +505,10 @@ function getLightdm(){
 
     if [[ -f $LDMDIR/$LDM ]];then
         cp "$LDMDIR/$LDM" "$CONFIGDIR"
-        echo "  Saved Lightdm config: $LDMDIR/$LDM"
-        echo "[LIGHTDM]" >> "$SETTINGS"
         TXT="Lightdm config:  $LDMDIR/$LDM\n"
-        echo "LightDM settings" >> "$LISTMSG"
+        echo -e "\n  Saved $TXT"
+        echo "[LIGHTDM]" >> "$SETTINGS"
+        echo "$TXT" >> "$LISTMSG"
     fi
 }
 
@@ -569,8 +571,8 @@ function getScrot(){            # Get screenshot & create thumbnail
     done < "$TMPSCROT"
     rm "$TMPSCROT"
 
-    echo "  Screenshot saved as: $SCROT/$ANS.jpg"
-    echo "  Screenshot thumbnail saved as: $THUMB"
+    echo -e "\n  Screenshot saved as: $SCROT/$ANS.jpg"
+    echo -e "\n  Screenshot thumbnail saved as: $THUMB"
 }
 
 function restoreGTK(){   # $1 is chosen saved config dir
@@ -585,12 +587,12 @@ function restoreGTK(){   # $1 is chosen saved config dir
                     cp -r ${GTKSAVED[i]}/* ${GTKPATHS[i]} # restore contents of gtk-3.0
                 fi
                 cp ${GTKSAVED[i]} ${GTKPATHS[i]}
-                echo "  Restored: ${GTKSAVED[i]}"
+                echo -e "\n  Restored: ${GTKSAVED[i]}"
             else
-                echo "  Restore path ${GTKPATHS[i]} not found" 2>&1
+                echo -e "\n  Restore path ${GTKPATHS[i]} not found" 2>&1
             fi
         else
-            echo "  ${GTKSAVED[i]} not found" 2>&1
+            echo -e "\n  ${GTKSAVED[i]} not found" 2>&1
         fi
         i=$(($i+1))
     done
@@ -617,7 +619,7 @@ function restoreOBrc(){
         }" $FTEMP
         sed -i '/^$/d' $FTEMP   # remove empty lines
         cp $FTEMP "$RCFILE"     # overwrite rc.xml
-        echo "  rc.xml backed up and edited for OB theme"
+        echo -e "\n  rc.xml backed up and edited for OB theme"
         rm $FTEMP
     fi
 }
@@ -640,7 +642,7 @@ function restoreDmenu(){
         cp "$DMENUDIR/$DMENU" "$DMENUBKP"
         cp "$DFILE" "$DMENUDIR"
         echo -e "\n  $DMENUDIR/$DMENU backed up and restored"
-        echo -e "$DMENUDIR/$DMENU\n$DFILE"
+        echo -e "  $DMENUDIR/$DMENU\n$DFILE"
     else
         cp "$DFILE" "$DMENUDIR/$DMENU"
         echo -e "\n  $DMENUDIR/$DMENU restored"
@@ -657,15 +659,15 @@ function restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
         DLG=$?
         case "$DLG" in
             0   )   MSG="  Restored: lightdm-gtk-greeter.conf"
-                    echo -e "\n$MSG"
+                    echo -e "\n  $MSG"
                     break
                     ;;
             255 )   MSG="  Authentication cancelled\n\nlightdm-gtk-greeter.conf was not restored"
-                    echo -e "\n$MSG" 2>&1
+                    echo -e "\n  $MSG" 2>&1
                     break
                     ;;
             *   )   MSG="  Password input failed\n\nlightdm-gtk-greeter.conf was not restored"
-                    echo -e "\n$MSG" 2>&1
+                    echo -e "\n  $MSG" 2>&1
                     "$DIALOG" --image="dialog-warning" "$T$MSG" "$OK" 2>/dev/null
                     ;;
         esac
@@ -750,7 +752,7 @@ function saveSettings(){
                                         ;;
                         "$PICKLDM"  )   getLightdm
                                         ;;
-                        *           )   echo "  Unknown value!" 2>&1
+                        *           )   echo -e "\n  Unknown value!" 2>&1
                                         exit 1
                                         ;;
                     esac
@@ -875,14 +877,14 @@ function restoreSettings(){
                 getScrot
                 if [[ -d $CONFIGDIR-BKP ]];then
                     rm -rf "$CONFIGDIR-BKP"
-                    echo -e "Temporary $CONFIGDIR deleted\n"
+                    echo -e "\n  Temporary $CONFIGDIR deleted\n"
                 fi
                 restoreSettings
                 ;;
             *)  if [[ $RET = 252 ]];then
-                    echo "Exited with \"ESC\" key"
+                    echo -e "\n  Exited with \"ESC\" key"
                 else
-                    echo "Error= $RET" 2>&1
+                    echo -e "\n  Error= $RET" 2>&1
                 fi
                 exit 1
                 ;;
@@ -922,19 +924,19 @@ function restoreSettings(){
                                     eval $(cat ~/.fehbg)
                                 else
                                     cp "$FPATH/bg-saved.cfg" "$NITRODIR"
-                                    (sleep 1s && nitrogen --restore ) &
+                                    sleep 1s && nitrogen --restore
                                 fi
                                 ;;
             "[DMENU]"       )   restoreDmenu "$FPATH/$DMENU"
                                 ;;
             "[LIGHTDM]"     )   restoreLightdm "$FPATH/$LDM"
                                 ;;
-            *               )   echo "  Unknown value!" 2>&1
+            *               )   echo -e "  Unknown value!" 2>&1
                                 restoreSettings
                                 ;;
         esac
     done < "$SETCFG"
-    (sleep 1s && openbox --reconfigure) &
+    sleep 1s && openbox --reconfigure
     restoreSettings
 }
 
@@ -959,7 +961,7 @@ END
 mkdir -p "$CONFIGPATH"
 
 # create file to hold most recent saved configuration name
-if [[ ! -f $CURSESSION ]];then
+if [[ ! -f $CURSESSION ]] 2>/dev/null;then
     touch "$CURSESSION"
 fi
 countMonitors
