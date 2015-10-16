@@ -924,11 +924,7 @@ function restoreSettings(){
                                     eval $(cat ~/.fehbg)
                                 else
                                     cp "$FPATH/bg-saved.cfg" "$NITRODIR"
-<<<<<<< HEAD
                                     nitrogen --restore
-=======
-                                    sleep 1s && nitrogen --restore
->>>>>>> conkys
                                 fi
                                 ;;
             "[DMENU]"       )   restoreDmenu "$FPATH/$DMENU"
@@ -940,7 +936,7 @@ function restoreSettings(){
                                 ;;
         esac
     done < "$SETCFG"
-    sleep 1s && openbox --reconfigure
+    openbox --reconfigure
     restoreSettings
 }
 
