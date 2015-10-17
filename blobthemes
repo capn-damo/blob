@@ -862,6 +862,7 @@ function restoreSettings(){
                 if [[ $? = 0 ]];then
                     rm -rf "$FPATH"
                     rm "$FPATH.jpg"
+                    echo -e "\n$DIR DELETED"
                     currentsession=$(cat $CURSESSION)
                     fpath=$(basename $FPATH)
                     if [ "$currentsession" = "$fpath" ];then
