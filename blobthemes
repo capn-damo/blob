@@ -337,9 +337,9 @@ function getNitrogen(){  # get Nitrogen saved backgrounds
                 BG="$BG$BGLINE;\n"
             fi
         done < "$NFILE"
-        echo -e "\n  Backgrounds set with Nitrogen, using:\n\
-        \t$NITROFILE\n\t$BG"
-        echo "Background set with nitrogen:\n\t$BG" >> "$LISTMSG"
+        echo -e "\n  Backgrounds set with Nitrogen, using:\t$NITROFILE"
+        echo -e "$BG"
+        echo "Background set with nitrogen:\n$BG" >> "$LISTMSG"
     else
         echo "\n  $NFILE not found" 2>&1
     fi
@@ -763,7 +763,7 @@ function saveSettings(){
     done
     TXT="<big><b><u>Openbox Configurations to be saved:</u></b></big>\n\n"
     TXT2=$(cat "$LISTMSG")
-    NEW=$($DIALOG --text="$TXT$TXT2" 2>/dev/null)
+    NEW=$($DIALOG --text="$TXT$TXT2")
 
     if [[ $? = 1 ]];then
         cleanup save
@@ -825,6 +825,7 @@ function ViewRestoreDialog(){  #   Display saved theme collections
 function restoreSettings(){
 
     ViewRestoreDialog
+    FPATH=""
     LOOP=1
     while [[ $LOOP ]] ;do 
         CONFIG=$($DIALOGDEC --list --title="$TITLE" \
@@ -857,7 +858,15 @@ function restoreSettings(){
                 ;;
             1)  exit 0
                 ;;
-            2)  TEXT="Delete saved configurations <b>$FPATH</b>\nand screenshot?"
+            2)   if ! [[ $CONFIG ]];then
+                    $DIALOG --text="Make a selection before trying to delete" "$EXIT" "$OK"
+                    if (( $? == 0 ));then
+                        continue
+                    else
+                        exit 0
+                    fi
+                fi
+                TEXT="Delete saved configurations <b>$FPATH</b>\nand screenshot?"
                 $DIALOG "$T$TEXT" "$CANCEL" "$OK" 2>/dev/null 
                 if [[ $? = 0 ]];then
                     rm -rf "$FPATH"
