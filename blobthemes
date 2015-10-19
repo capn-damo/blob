@@ -519,11 +519,11 @@ function ShowRootMenu(){ # Display root menu for screenshot
     screenH=$(xrandr -q | awk '/Screen/ {print $10}')
     screenH=${screenH%,}
     if (( $MON == 1 ));then
-        posX=$((screenW / 4 ))
+        posX=$((screenW / 6))
     else
-        posX=$((screenW / 6 ))
+        posX=$((screenW / 8))
     fi
-    posY=$((screenH / 5 ))
+    posY=$((screenH / 6))
 
     xdotool mousemove --sync $posX $posY 
 
@@ -537,15 +537,14 @@ function ShowRootMenu(){ # Display root menu for screenshot
     xdotool key Right && sleep 0.2
     }
 
-showOBconf(){
-
+showGUIapp(){   # start lxappearance to show gtk/OB theme for screenshot
     if [[ $1 = "start" ]];then
-        if [[ $(type obconf) ]];then
-            obconf &
+        if [[ $(type lxappearance) ]];then
+            lxappearance &
             pid=$!
         fi
     elif [[ $1 = stop ]];then
-        if [[ $(pgrep obconf) = $pid ]];then
+        if [[ $(pgrep lxappearance | grep $pid) ]];then
             kill -9 $pid
         fi
     fi
@@ -566,7 +565,7 @@ function getScrot(){            # Get screenshot & create thumbnail
         xdotool windowactivate "$CONK" 
     done
 
-    showOBconf start && sleep 0.5
+    showGUIapp start && sleep 0.5   # show lxappearance for the scrot
     ShowRootMenu    # display root menu for the scrot
 
     scrot -t 9 "$SCROT.jpg"    # scrot thumbnail @9% fulsize
@@ -576,7 +575,7 @@ function getScrot(){            # Get screenshot & create thumbnail
 
     # close root menu
     xdotool mousemove_relative --sync --polar 0 10 $MOUSECMD
-    showOBconf stop
+    showGUIapp stop
 
     while read line; do
         WINDOW=$(echo $line | awk '{print $1}') # Window_ID is first field
