@@ -82,8 +82,8 @@ PICKSCROT="Save screenshot"
 ### END CONFIGS VARIABLES
 
 ### DIALOG VARIABLES
-DIALOG="yad --center --undecorated --borders=20 --window-icon=gtk-preferences"
-DIALOGDEC="yad --center  --borders=20 --window-icon=gtk-preferences"
+DIALOG="yad --center --undecorated --borders=20 --window-icon=/usr/share/pixmaps/Bunsenlabs-flame-256.svg"
+DIALOGDEC="yad --center  --borders=20 --window-icon=/usr/share/pixmaps/Bunsenlabs-flame-256.svg"
 TITLE="BLOB Config Manager"
 IMG="--image="
 IMGPATH="$HOME/tmp/Bunsenlabs-flame-256.svg"
@@ -124,6 +124,7 @@ function Intro(){
         2>/dev/null ) 
     else
         INTRO=$($DIALOGDEC $IMG$IMGPATH \
+        --title="$TITLE" \
         "$T$TXTINTRO" \
         --button="Save Settings:0" --button="gtk-close:1" \
         --borders=30 \
