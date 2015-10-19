@@ -86,7 +86,7 @@ DIALOG="yad --center --undecorated --borders=20 --window-icon=/usr/share/pixmaps
 DIALOGDEC="yad --center  --borders=20 --window-icon=/usr/share/pixmaps/Bunsenlabs-flame-256.svg"
 TITLE="BLOB Config Manager"
 IMG="--image="
-IMGPATH="$HOME/tmp/Bunsenlabs-flame-256.svg"
+IMGPATH="/usr/share/pixmaps/Bunsenlabs-flame-256.svg"
 T="--text="
 OK="--button=OK:0"
 CANCEL="--button=gtk-cancel:1"
@@ -140,7 +140,6 @@ function Intro(){
                 rm -rf "$CONFIGDIR-BKP"
                 echo -e "\n  Temporary $CONFIGDIR deleted\n"
             fi
-            $DIALOG --text="Settings were saved as <b>$ANS</b>" --image="gtk-save" "$OK"
             if [[ $? ]];then
                 restoreSettings
             fi
@@ -571,9 +570,9 @@ function getScrot(){            # Get screenshot & create thumbnail
         fi
     done < "$TMPSCROT"
     rm "$TMPSCROT"
-
-    echo -e "\n  Screenshot saved as: $SCROT/$ANS.jpg"
-    echo -e "\n  Screenshot thumbnail saved as: $THUMB"
+    THUMB=$(basename $THUMB)
+    echo -e "\n  Screenshot saved as: $CONFIGPATH/$ANS.jpg"
+    echo -e "\n  Screenshot thumbnail saved as: $CONFIGDIR/$THUMB"
 }
 
 function restoreGTK(){   # $1 is chosen saved config dir
@@ -771,6 +770,7 @@ function saveSettings(){
         restoreSettings
     else
         echo "$ANS" > "$CURSESSION"     # replace entry in saved config flag file
+        $DIALOG --text="Settings were saved as <b>$ANS</b>" --image="gtk-save" "$OK"
     fi
 }
 
