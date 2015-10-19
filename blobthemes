@@ -521,9 +521,9 @@ function ShowRootMenu(){ # Display root menu for screenshot
     if (( $MON == 1 ));then
         posX=$((screenW / 6))
     else
-        posX=$((screenW / 8))
+        posX=$((screenW / 10))
     fi
-    posY=$((screenH / 6))
+    posY=$((screenH / 3))
 
     xdotool mousemove --sync $posX $posY 
 
@@ -537,7 +537,7 @@ function ShowRootMenu(){ # Display root menu for screenshot
     xdotool key Right && sleep 0.2
     }
 
-showGUIapp(){   # start lxappearance to show gtk/OB theme for screenshot
+function showGUIapp(){   # start lxappearance to show gtk/OB theme for screenshot
     if [[ $1 = "start" ]];then
         if [[ $(type lxappearance) ]];then
             lxappearance &
@@ -657,7 +657,6 @@ function restoreDmenu(){
         cp "$DMENUDIR/$DMENU" "$DMENUBKP"
         cp "$DFILE" "$DMENUDIR"
         echo -e "\n  $DMENUDIR/$DMENU backed up and restored"
-        echo -e "  $DMENUDIR/$DMENU\n$DFILE"
     else
         cp "$DFILE" "$DMENUDIR/$DMENU"
         echo -e "\n  $DMENUDIR/$DMENU restored"
@@ -721,7 +720,7 @@ function saveSettings(){
         CHOICE=$($DIALOG --list --checklist --title \
             --text="Choose the configs you want to save..." \
             $CANCEL $OK \
-            --width=340 --height=300 \
+            --width=340 --height=340 \
             --column="Select" --column="Config" "${COLUMNS[@]}" \
             2>/dev/null )
         if [[ $? = 1 ]]; then # cancel button pressed
