@@ -92,7 +92,7 @@ OK="--button=OK:0"
 CANCEL="--button=gtk-cancel:1"
 EXIT="--button=gtk-quit:1"
 CLOSE="--button=gtk-close:1"
-TXTINTRO="\n\n<big><b>BunsenLabs\n\nOpenbox Configuration Manager</b></big>\n\n\n \
+TXTINTRO="<big><b>BunsenLabs\n\nOpenbox Configuration Manager</b></big>\n\n\n \
 <b>Save or Restore settings for:</b>\n\n \
 \t\tOpenbox theme\n \
 \t\tGTK theme\n \
@@ -537,6 +537,20 @@ function ShowRootMenu(){ # Display root menu for screenshot
     xdotool key Right && sleep 0.2
     }
 
+showOBconf(){
+
+    if [[ $1 = "start" ]];then
+        if [[ $(type obconf) ]];then
+            obconf &
+            pid=$!
+        fi
+    elif [[ $1 = stop ]];then
+        if [[ $(pgrep obconf) = $pid ]];then
+            kill -9 $pid
+        fi
+    fi
+}
+
 function getScrot(){            # Get screenshot & create thumbnail
 
     TMPSCROT="$CONFIGPATH/tmpscrot.tmp"
@@ -552,6 +566,7 @@ function getScrot(){            # Get screenshot & create thumbnail
         xdotool windowactivate "$CONK" 
     done
 
+    showOBconf start && sleep 0.5
     ShowRootMenu    # display root menu for the scrot
 
     scrot -t 9 "$SCROT.jpg"    # scrot thumbnail @9% fulsize
@@ -561,6 +576,7 @@ function getScrot(){            # Get screenshot & create thumbnail
 
     # close root menu
     xdotool mousemove_relative --sync --polar 0 10 $MOUSECMD
+    showOBconf stop
 
     while read line; do
         WINDOW=$(echo $line | awk '{print $1}') # Window_ID is first field
@@ -770,7 +786,6 @@ function saveSettings(){
         restoreSettings
     else
         echo "$ANS" > "$CURSESSION"     # replace entry in saved config flag file
-        $DIALOG --text="Settings were saved as <b>$ANS</b>" --image="gtk-save" "$OK"
     fi
 }
 
@@ -886,6 +901,7 @@ function restoreSettings(){
             3)  setName
                 saveSettings
                 getScrot
+                $DIALOG --text="Settings were saved as <b>$ANS</b>" --image="gtk-save" "$OK"
                 if [[ -d $CONFIGDIR-BKP ]];then
                     rm -rf "$CONFIGDIR-BKP"
                     echo -e "\n  Temporary $CONFIGDIR deleted\n"
