@@ -39,7 +39,6 @@
 #
 # TODO:
 # Deal with per-desktop conky situations;
-# Remove older conkyrc backups
 #
 #### VARIABLES #########################################################
 CONFIGPATH="$HOME/.config/blob"
@@ -619,9 +618,16 @@ function restoreOBrc(){
 
     if [[ $(grep "[OBTHEME]" "$1/settings.cfg" ) ]] &>/dev/null;then
         # backup rc.xml first
-        NOW=$(date +"%Y%m%d-%H%M")
-        RCBKP="$RCFILE.$NOW"
+        NOW=$(date +"%Y%m%d-%H%M%S")
+        RCBKP="$RCFILE.blob.$NOW"
         cp "$RCFILE" "$RCBKP"
+        
+        # remove older backups
+        for f in $(find $OBPATH -type f|grep .blob. );do
+            if [[ $f -ot $RCBKP ]];then
+                rm "$f"
+            fi
+        done
         
         ## put placeholder in place of <theme> section, write to tempfile
         sed -n "/<theme>/{:a;N;/<\/theme>/!ba;N;s/.*\n/THEMESECTION\n/};p" "$RCFILE" > $FTEMP
