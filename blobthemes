@@ -117,7 +117,7 @@ function Intro(){
         --title="$TITLE" \
         --button="Save Settings:0" --button="View Saved:2" $CLOSE \
         --borders=30 \
-        --width=480 --height=500 \
+        --width=520 --height=500 \
         2>/dev/null ) 
     else
         INTRO=$($DIALOGDEC $IMG$IMGPATH \
@@ -125,6 +125,7 @@ function Intro(){
         "$T$TXTINTRO" \
         --button="Save Settings:0" --button="gtk-close:1" \
         --borders=30 \
+        --width=520 --height=500 \
         2>/dev/null ) 
     fi
 
