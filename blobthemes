@@ -39,7 +39,7 @@
 #
 # TODO:
 # Deal with per-desktop conky situations;
-# Adjust dialog width for dual screens
+# Remove older conkyrc backups
 #
 #### VARIABLES #########################################################
 CONFIGPATH="$HOME/.config/blob"
