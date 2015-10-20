@@ -510,21 +510,50 @@ function getLightdm(){
     fi
 }
 
-function ShowRootMenu(){ # Display root menu for screenshot
+function setMouse(){
 
+    RC="$OBPATH/rc.xml"
+    MOVE_R=0
+    MOVE_V=0
+
+    if [[ $1 = app ]];then
+        if grep ">Smart<" "$RC";then
+            cp "$RC" "$RC.blobbkp"
+            sed -i 's/>Smart</>UnderMouse</g' "$RC"
+            MOVE_R=200
+            MOVE_V=-200
+        fi
+    fi
     # Set mouse position, for appearance of root-menu
     screenW=$(xrandr -q | awk '/Screen/ {print $8}')
     screenH=$(xrandr -q | awk '/Screen/ {print $10}')
     screenH=${screenH%,}
     if (( $MON == 1 ));then
-        posX=$((screenW / 6))
+        posX=$(((screenW / 6)+MOVE_R))
     else
-        posX=$((screenW / 10))
+        posX=$(((screenW / 10)+MOVE_R))
     fi
-    posY=$((screenH / 3))
+    posY=$(((screenH / 3)+MOVE_V))
 
-    xdotool mousemove --sync $posX $posY 
+    xdotool mousemove --sync $posX $posY
+}
 
+function ShowRootMenu(){ # Display root menu for screenshot
+
+    ## Set mouse position, for appearance of root-menu
+    #screenW=$(xrandr -q | awk '/Screen/ {print $8}')
+    #screenH=$(xrandr -q | awk '/Screen/ {print $10}')
+    #screenH=${screenH%,}
+    #if (( $MON == 1 ));then
+        #posX=$((screenW / 6))
+    #else
+        #posX=$((screenW / 10))
+    #fi
+    #posY=$((screenH / 3))
+
+    #xdotool mousemove --sync $posX $posY
+
+setMouse
     # display "Menu -> Preferences" as an example
     # (Adjust the moves to display the entry you want!)
     xdotool $MOUSECMD && \
@@ -536,15 +565,22 @@ function ShowRootMenu(){ # Display root menu for screenshot
     }
 
 function showGUIapp(){   # start lxappearance to show gtk/OB theme for screenshot
+
     if [[ $1 = "start" ]];then
         if [[ $(type lxappearance) ]];then
+            setMouse app
             lxappearance &
             pid=$!
         fi
     elif [[ $1 = stop ]];then
         if [[ $(pgrep lxappearance | grep $pid) ]];then
-            kill -9 $pid
+            kill -9 $pid &>/dev/null
         fi
+    fi
+    # restore rc.xml from backup if necessary
+    if [[ -e "$OBPATH/rc.xml.blobbkp" ]] 2>/dev/null;then
+        mv $OBPATH/rc.xml.blobbkp $OBPATH/rc.xml
+        echo -e "\nRestored rc.xml from backup"
     fi
 }
 
