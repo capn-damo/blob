@@ -516,24 +516,31 @@ function setMouse(){
     MOVE_V=0
 
     if [[ $1 = app ]];then
-        if grep ">Smart<" "$RC";then
+        if grep ">Smart<" "$RC" &>/dev/null;then
             cp "$RC" "$RC.blobbkp"
             sed -i 's/>Smart</>UnderMouse</g' "$RC"
-            MOVE_R=200
-            MOVE_V=-200
+            MOVE_R=20
+            MOVE_V=-10
         fi
     fi
     # Set mouse position, for appearance of root-menu
     screenW=$(xrandr -q | awk '/Screen/ {print $8}')
     screenH=$(xrandr -q | awk '/Screen/ {print $10}')
     screenH=${screenH%,}
+    #if (( $MON == 1 ));then
+        #posX=$(((screenW / 6)+MOVE_R))
+    #else
+        #posX=$(((screenW / 10)+MOVE_R))
+    #fi
+    #posY=$(((screenH / 3)+MOVE_V))
+    
     if (( $MON == 1 ));then
-        posX=$(((screenW / 6)+MOVE_R))
+        posX=$(( (screenW/100)*20 + (screenW/100)*MOVE_R ))
     else
         posX=$(((screenW / 10)+MOVE_R))
     fi
-    posY=$(((screenH / 3)+MOVE_V))
-
+    posY=$(( (screenH/100)*40 - (screenH/100)*MOVE_V ))
+echo "POSX= $posX; POSY= $posY"
     xdotool mousemove --sync $posX $posY
 }
 
@@ -599,7 +606,7 @@ function getScrot(){            # Get screenshot & create thumbnail
     done
 
     showGUIapp start && sleep 0.5   # show lxappearance for the scrot
-    ShowRootMenu    # display root menu for the scrot
+    ShowRootMenu && sleep 0.5    # display root menu for the scrot
 
     scrot -t 9 "$SCROT.jpg"    # scrot thumbnail @9% fulsize
 
