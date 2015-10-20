@@ -117,7 +117,7 @@ function Intro(){
         --title="$TITLE" \
         --button="Save Settings:0" --button="View Saved:2" $CLOSE \
         --borders=30 \
-        --width=480 --height=500 \
+        --width=520 --height=500 \
         2>/dev/null ) 
     else
         INTRO=$($DIALOGDEC $IMG$IMGPATH \
@@ -125,6 +125,7 @@ function Intro(){
         "$T$TXTINTRO" \
         --button="Save Settings:0" --button="gtk-close:1" \
         --borders=30 \
+        --width=520 --height=500 \
         2>/dev/null ) 
     fi
 
@@ -512,8 +513,13 @@ function getLightdm(){
 function setMouse(){
 
     RC="$OBPATH/rc.xml"
-    MOVE_R=-40  # % move for menu
-    MOVE_V=-40
+    if (( $M0N == 1 ));then
+        MOVE_R=-40  # % move for menu
+        MOVE_V=-40
+    else
+        MOVE_R=-20  # % move for menu, dual monitors
+        MOVE_V=-20
+    fi
 
     if [[ $1 = app ]];then
         if grep ">Smart<" "$RC" &>/dev/null;then
@@ -521,8 +527,14 @@ function setMouse(){
             sed -i 's/>Smart</>UnderMouse</g' "$RC"
             openbox --reconfigure
         fi
-        MOVE_R=10   # % move for app
+    if (( $M0N == 1 ));then
+        MOVE_R=10  # % move for app window
         MOVE_V=10
+    else
+        MOVE_R=5  # % move for dual monitors
+        MOVE_V=5
+    fi
+
     fi
     # Set mouse position, for appearance of root-menu
     screenW=$(xrandr -q | awk '/Screen/ {print $8}')
