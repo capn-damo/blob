@@ -32,8 +32,10 @@
 # The dialog icon is "Bunsenlabs-flame-256.svg": put it in /usr/share/pixmaps.
 #
 # xdotool is used to move the mouse pointer, and assumes the root-menu is shown.
-# with "Super + Space" keys. If you have set this to something else, then edit
-# the "MENUMODIFIER" variable
+# with "Super + Space" keys, and the right mouse button is set for r-click.
+# If you have set these to something else, then edit the "MENUMODIFIER" and
+# MOUSECMD variables. Set the variable "KEYDOWN" to where "Preferences" is
+# in the root-menu (or anything else you might want displayed).
 #
 ########################################################################
 #
@@ -102,8 +104,9 @@ TXTINTRO="<big><b>BunsenLabs\n\nOpenbox Configuration Manager</b></big>\n\n\n \
 ### END DIALOG VARIABLES
 
 ### USER OB ACTIONS
-MENUMODIFIER="super+space" # keybind for show root-menu
-
+MENUMODIFIER="super+space"  # keybind for show root-menu
+MOUSECMD="click 3"          # mouse r-click
+KEYDOWN=14           # adjust this for where "Preferences" is in the menu
 #### END VARIABLES #####################################################
 
 ### FUNCTIONS ##########################################################
@@ -521,10 +524,13 @@ function ShowRootMenu(){ # Display root menu for screenshot
     setMouse menu   # Move mouse
     # display "Menu -> Preferences" as an example
     # (Adjust the moves to display the entry you want!)
-    xdotool key --clearmodifiers "$MENUMODIFIER" && \
-    xdotool key Down key Down key Down key Down key Down key Down \
-    key Down key Down key Down key Down key Down key Down key Down && \
-    xdotool key Right && sleep 0.2
+    xdotool key --clearmodifiers "$MENUMODIFIER"
+    i=1
+    while [ $i -le $KEYDOWN ];do 
+        xdotool key Down
+        i=$(( $i+1 ))
+    done
+    sleep 0.2 && xdotool key Right && sleep 0.2
 }
 
 function showGUIapp(){   # start lxappearance to show gtk/OB theme for screenshot
