@@ -31,9 +31,9 @@ A time-stamped backup of rc.xml is saved "just in case".
 
 The dialog icon is "Bunsenlabs-flame-256.svg": put it in /usr/share/pixmaps.
 
-xdotool is used to move the mouse pointer, and assumes Rclick is "click 3".
-If you have the right button set to something else, then adjust the 
-"MOUSECMD" variable
+xdotool is used to move the mouse pointer, and assumes the root-menu is shown.
+with "Super + Space" keys. If you have set this to something else, then edit
+the "MENUMODIFIER" variable
 
 ************************************************************************
 

@@ -31,9 +31,9 @@
 #
 # The dialog icon is "Bunsenlabs-flame-256.svg": put it in /usr/share/pixmaps.
 #
-# xdotool is used to move the mouse pointer, and assumes Rclick is "click 3".
-# If you have the right button set to something else, then adjust the 
-# "MOUSECMD" variable
+# xdotool is used to move the mouse pointer, and assumes the root-menu is shown.
+# with "Super + Space" keys. If you have set this to something else, then edit
+# the "MENUMODIFIER" variable
 #
 ########################################################################
 #
@@ -102,8 +102,7 @@ TXTINTRO="<big><b>BunsenLabs\n\nOpenbox Configuration Manager</b></big>\n\n\n \
 ### END DIALOG VARIABLES
 
 ### USER OB ACTIONS
-MOUSECMD="click 3"      #   R-click (show root-menu)
-
+MENUMODIFIER="super+space" # keybind for show root-menu
 #### END VARIABLES #####################################################
 
 ### FUNCTIONS ##########################################################
@@ -555,7 +554,7 @@ function ShowRootMenu(){ # Display root menu for screenshot
     setMouse menu   # Move mouse
     # display "Menu -> Preferences" as an example
     # (Adjust the moves to display the entry you want!)
-    xdotool $MOUSECMD && \
+    xdotool key --clearmodifiers "$MENUMODIFIER" && \
     xdotool key Down key Down key Down key Down key Down key Down \
     key Down key Down key Down key Down key Down key Down \
     key Down key Down && \
@@ -565,7 +564,7 @@ function ShowRootMenu(){ # Display root menu for screenshot
 
 function showGUIapp(){   # start lxappearance to show gtk/OB theme for screenshot
 
-    if [[ $1 = "start" ]];then
+    if [[ $1 = start ]];then
         if [[ $(type lxappearance) ]];then
             setMouse app
             lxappearance &
