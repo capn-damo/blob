@@ -17,13 +17,13 @@
 #
 # Paths are assumed to be BunsenLabs defaults
 #
-# WARNING: It is assumed that the conkys are not being run via a script, so 
-# they will appear on all desktops. If you usually use a script, then you 
+# WARNING: It is assumed that the conkys are not being run via a script, so
+# they will appear on all desktops. If you usually use a script, then you
 # may have to make your own arrangements! Conkys in non-default directories
 # can be saved, but will not be seen when running bl-conkyzen.
 #
 # A Screenshot is saved (Windows are hidden briefly so the image
-#                        is the bare desktop, with any Tint2s 
+#                        is the bare desktop, with any Tint2s
 #                        or Conkys which are running, and a representive
 #                        menu open)
 #
@@ -31,11 +31,19 @@
 #
 # The dialog icon is "Bunsenlabs-flame-256.svg": put it in /usr/share/pixmaps.
 #
-# xdotool is used to move the mouse pointer, and assumes Rclick is "click 3".
-# If you have the right button set to something else, then adjust the 
-# "MOUSECMD" variable
+# xdotool is used to move the mouse pointer, and assumes the root-menu is shown.
+# with "Super + Space" keys, and the right mouse button is set for r-click.
+# If you have set these to something else, then edit the "MENUMODIFIER" and
+# MOUSECMD variables. Set the variable "KEYDOWN" to where "Preferences" is
+# in the root-menu (or anything else you might want displayed).
 #
 ########################################################################
+#
+# KNOWN ISSUES:
+# Virtualbox does not allow the guest to move the host mouse cursor, using xdotool,
+# so the screenshot may produce an incorrect theme displayed and/or poor positioning.
+# A workaround is to move the cursor to some free space, and use the "Enter" key in the
+# "Configurations to be saved:" dialog.
 #
 # TODO:
 # Deal with per-desktop conky situations;
@@ -102,14 +110,14 @@ TXTINTRO="<big><b>BunsenLabs\n\nOpenbox Configuration Manager</b></big>\n\n\n \
 ### END DIALOG VARIABLES
 
 ### USER OB ACTIONS
-MOUSECMD="click 3"      #   R-click (show root-menu)
-
+MENUMODIFIER="super+space"  # keybind for show root-menu
+MOUSECMD="click 3"          # mouse r-click
+KEYDOWN=14           # adjust this for where "Preferences" is in the menu
 #### END VARIABLES #####################################################
 
 ### FUNCTIONS ##########################################################
 
 function Intro(){
-
     getSet
     #  If blob/ is empty, then don't display "Save Settings" option in Intro dialog
     if [[ $NUMDIRS -gt 0 ]];then
@@ -118,7 +126,7 @@ function Intro(){
         --button="Save Settings:0" --button="View Saved:2" $CLOSE \
         --borders=30 \
         --width=520 --height=500 \
-        2>/dev/null ) 
+        2>/dev/null )
     else
         INTRO=$($DIALOGDEC $IMG$IMGPATH \
         --title="$TITLE" \
@@ -126,9 +134,8 @@ function Intro(){
         --button="Save Settings:0" --button="gtk-close:1" \
         --borders=30 \
         --width=520 --height=500 \
-        2>/dev/null ) 
+        2>/dev/null )
     fi
-
     RET=$?
     case $RET in
         0)  setName
@@ -154,7 +161,6 @@ function Intro(){
 }
 
 function getSet(){      # get name of currently set BLOB config
-
     NUMDIRS=0
     NUMDIRS=$(ls -l "$CONFIGPATH" | grep -c ^d) # check if any dirs present
     if (( $NUMDIRS == 0 ));then
@@ -167,7 +173,6 @@ function getSet(){      # get name of currently set BLOB config
 }
 
 function countMonitors(){ #test for more than 2 monitors connected.
-
     MON=$(xrandr -q | grep -c " connected")
     PRIMARY=$(xrandr -q | awk '/ connected/ {if ($3=="primary") print $4}')
     PSIZE=${PRIMARY%%x*}    # Primary monitor width
@@ -186,7 +191,6 @@ function getScreenDims(){   # Set width and height for View dialog
     desktopW=$(xrandr -q | awk '/Screen/ {print $8}')  # total desktop width
     desktopH=$(xrandr -q | awk '/Screen/ {print $10}') # desktop height
     desktopH=${desktopH%%,*}    # remove trailing comma
-
     if (( $1 == 1 ));then
         W=$(( $desktopW / 3 ))  # 1/3 width
     else
@@ -196,7 +200,6 @@ function getScreenDims(){   # Set width and height for View dialog
 }
 
 function setName(){  # set name of collection, make dir and session settings file
-
     MSG="  Configurations will be saved to a new directory in  \
     \n  $CONFIGPATH\n\n  Enter name of new collection...  "
     MSG2="  No file specified for new saved session.\n\n  Try again?"
@@ -214,7 +217,6 @@ function setName(){  # set name of collection, make dir and session settings fil
             "$CANCEL" "$OK" \
             "$T$MSG2" \
             2>/dev/null
-
             RET=$?
             echo -e "\n  No name entered for new collection!" 2>&1
             if [[ $RET = 0 ]];then
@@ -224,7 +226,7 @@ function setName(){  # set name of collection, make dir and session settings fil
             fi
         else
             ANS=$(echo $ANS | sed -e 's/ /_/g')    # replace any spaces in dir name
-            CONFIGDIR="$CONFIGPATH/$ANS" 
+            CONFIGDIR="$CONFIGPATH/$ANS"
             if [[ -d $CONFIGDIR ]];then
                 echo -e "\n  $CONFIGDIR already exists"
 
@@ -233,7 +235,6 @@ function setName(){  # set name of collection, make dir and session settings fil
                 "$CANCEL" "$OK" \
                 --width=300 \
                 2>/dev/null
-
                 if [[ $? = 0 ]];then
                     mv {"$CONFIGDIR","$CONFIGDIR-BKP"} && mkdir -p "$CONFIGDIR"
                     DEL=1
@@ -254,24 +255,20 @@ function setName(){  # set name of collection, make dir and session settings fil
             break
         fi
     done
-
     TIME=$(date)
-
     if [[ $DEL = 1 ]];then
         TXT="  (Existing session overwritten)"
     else
         TXT=""
     fi
     echo -e "\n  Configuration will be saved as: $ANS$TXT"
-
     # Store list in listfile
     echo -e "<b>Configuration name: $ANS</b>\t$TXT\nSaved at $TIME\n" >> "$LISTMSG"
 }
 
 function getBg(){    # find if feh or nitrogen was used. Save config file(s)
-
     if [[ -e $NITROFILE ]] && [[ -e $FEHFILE ]];then  # see which was last used to set background
-        if [[ $NITROFILE -nt $FEHFILE ]];then # use most recent method 
+        if [[ $NITROFILE -nt $FEHFILE ]];then # use most recent method
             BGSET="NITROGEN"
         else
             BGSET="FEH"
@@ -285,7 +282,6 @@ function getBg(){    # find if feh or nitrogen was used. Save config file(s)
         BGSET="None"
     fi
     echo -e "\n  Background to be set with $BGSET"
-
     case "$BGSET" in
         FEH     )   echo "[BACKGROUND] $BGSET" >> "$SETTINGS"
                     cp "$FEHFILE" "$CONFIGDIR"
@@ -308,7 +304,6 @@ function getBg(){    # find if feh or nitrogen was used. Save config file(s)
 }
 
 function bgFeh(){    # get Feh saved backgrounds
-
     FFILE="$CONFIGDIR/.fehbg"
     if [[ -f $FFILE ]];then
         BG=""
@@ -325,7 +320,6 @@ function bgFeh(){    # get Feh saved backgrounds
 }
 
 function getNitrogen(){  # get Nitrogen saved backgrounds
-
     NFILE="$CONFIGDIR/bg-saved.cfg"
     if [[ -f $NFILE ]];then
         BG=""
@@ -344,7 +338,6 @@ function getNitrogen(){  # get Nitrogen saved backgrounds
 }
 
 function getConky(){
-
     CONKYCMD=""
     LISTMSGTXT=""
     TXT=""
@@ -353,11 +346,9 @@ function getConky(){
         pgrep -a conky | while read pid CMD;do
             echo "$CMD;" >> "$TEMPFILE"
         done
-
         TXT="Conkys:\n\n"
         DEF="Default"
         MSG="Running Conkys:"
-
         while read line;do
             LINE=$(echo "$line" | sed 's/;//')
             CONKYCMD="$CONKYCMD $LINE & sleep 1s;"
@@ -370,7 +361,6 @@ function getConky(){
             LISTMSGTXT="$LISTMSGTXT\n\t$line"
         done < "$TEMPFILE"
         echo "[CONKY] $CONKYCMD" >> "$SETTINGS"
-
         rm "$TEMPFILE"
         echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
     else
@@ -384,7 +374,6 @@ function getConky(){
 }
 
 function checkConkyzen(){    # see if bl-conkyzen and session file present
-
     if type bl-conkyzen &>/dev/null;then
         if [[ -f $CONKYSESSION ]]; then
             CZEN=1  # set flag for Restore choice
@@ -393,7 +382,6 @@ function checkConkyzen(){    # see if bl-conkyzen and session file present
 }
 
 function getTint(){
-
     > "$TEMPFILE" # make blank tempfile, to save running tint2 paths
     pgrep -a tint2 | while read pid cmd;do
         if [[ ${cmd%% *} = tint2 ]];then
@@ -401,7 +389,6 @@ function getTint(){
             echo "$TPATH;" >> "$TEMPFILE"
         fi
     done
-
     TXT="Tint2s:\n\n"
     MSG="Running Tint2s:"
     TINTCMD=""
@@ -420,12 +407,10 @@ function getTint(){
     echo "[TINT2] $TINTCMD" >> "$SETTINGS"
     rm "$TEMPFILE"
     echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
-    
 }
 
 function killTints(){
-    
-    pgrep -a tint2 | while read pid cmd; do 
+    pgrep -a tint2 | while read pid cmd; do
         if [[ ${cmd%% *} = tint2 ]]; then
             kill "$pid"
         fi
@@ -433,7 +418,6 @@ function killTints(){
 }
 
 function checkTint2zen(){    # see if bl-tint2zen and session file present
-
     if type bl-tint2zen &>/dev/null;then
         if [[ -f $TINTSESSION ]]; then
             TZEN=1          # set flag for Restore choice
@@ -442,7 +426,6 @@ function checkTint2zen(){    # see if bl-tint2zen and session file present
 }
 
 function getOBtheme(){   # copy <theme> section from rc.xml to obtheme.txt
-
     RCFILE="$OBPATH/rc.xml"
     tag="theme"
     sed -n "/<$tag>/,/<\/$tag>/p" "$RCFILE" > "$CONFIGDIR/obtheme.txt"
@@ -451,7 +434,6 @@ function getOBtheme(){   # copy <theme> section from rc.xml to obtheme.txt
 }
 
 function getOBname(){    # get OB theme name
-
     OBFILE="$CONFIGDIR/obtheme.txt"
     OBTHEME=$(awk 'NR==2 {print;exit}' $OBFILE | awk -F'[>|<]' '{print $3}')
     TXT="Openbox theme:  $OBTHEME\n"
@@ -460,7 +442,6 @@ function getOBname(){    # get OB theme name
 }
 
 function getGTKtheme(){
-
     GTKTHEMES=( "$HOME/$GTK2" "$HOME/$GTK2MINE" "$GTK3" "$GTK3x" )
     for f in "${GTKTHEMES[@]}";do
         if [[ -f $f ]];then
@@ -474,7 +455,6 @@ function getGTKtheme(){
 }
 
 function getGTKname(){   # get GTK theme name
-
     GTKFILE="$CONFIGDIR/.gtkrc-2.0"
     while read line;do
         if [[ $(echo $line | grep "gtk-theme-name" ) ]] &>/dev/null;then
@@ -487,7 +467,6 @@ function getGTKname(){   # get GTK theme name
 }
 
 function getDmenu(){
-
     if [[ -d $DMENUDIR ]];then
         cp "$DMENUDIR/$DMENU" "$CONFIGDIR"
         echo "[DMENU]" >> "$SETTINGS"
@@ -500,7 +479,6 @@ function getDmenu(){
 }
 
 function getLightdm(){
-
     if [[ -f $LDMDIR/$LDM ]];then
         cp "$LDMDIR/$LDM" "$CONFIGDIR"
         TXT="Lightdm config:  $LDMDIR/$LDM\n"
@@ -511,7 +489,6 @@ function getLightdm(){
 }
 
 function setMouse(){
-
     MONS=$(xrandr -q | grep -c " connected")
     RC="$OBPATH/rc.xml"
     if [[ $1 = menu ]];then
@@ -540,7 +517,6 @@ function setMouse(){
     screenW=$(xrandr -q | awk '/Screen/ {print $8}')
     screenH=$(xrandr -q | awk '/Screen/ {print $10}')
     screenH=${screenH%,}
-
     if (( $MONS == 1 ));then # single monitor
         posX=$(( screenW/2 + (screenW/100)*MOVE_R ))
     else
@@ -551,21 +527,20 @@ function setMouse(){
 }
 
 function ShowRootMenu(){ # Display root menu for screenshot
-
     setMouse menu   # Move mouse
     # display "Menu -> Preferences" as an example
     # (Adjust the moves to display the entry you want!)
-    xdotool $MOUSECMD && \
-    xdotool key Down key Down key Down key Down key Down key Down \
-    key Down key Down key Down key Down key Down key Down \
-    key Down key Down && \
-
-    xdotool key Right && sleep 0.2
+    xdotool key --clearmodifiers "$MENUMODIFIER"
+    i=1
+    while [ $i -le $KEYDOWN ];do 
+        xdotool key Down
+        i=$(( $i+1 ))
+    done
+    sleep 0.2 && xdotool key Right && sleep 0.2
 }
 
 function showGUIapp(){   # start lxappearance to show gtk/OB theme for screenshot
-
-    if [[ $1 = "start" ]];then
+    if [[ $1 = start ]];then
         if [[ $(type lxappearance) ]];then
             setMouse app
             lxappearance &
@@ -584,37 +559,29 @@ function showGUIapp(){   # start lxappearance to show gtk/OB theme for screensho
 }
 
 function getScrot(){            # Get screenshot & create thumbnail
-
     TMPSCROT="$CONFIGPATH/tmpscrot.tmp"
     SCROT="$CONFIGPATH/$ANS"
-
     # get current desktop number
     CURRDTOP=$(xprop -root _NET_CURRENT_DESKTOP | tail -c -2)
     wmctrl -l -x > "$TMPSCROT"      # store window list in tempfile
     wmctrl -k on                    # hide windows, show desktop
-
     # show any conkys which have been hidden by wmctrl, (ie not own_window_type desktop)
-    for CONK in $(xdotool search --classname "Conky");do 
-        xdotool windowactivate "$CONK" 
+    for CONK in $(xdotool search --classname "Conky");do
+        xdotool windowactivate "$CONK"
     done
-
     showGUIapp start && sleep 0.5   # show lxappearance for the scrot
     ShowRootMenu && sleep 0.5    # display root menu for the scrot
-
     scrot -t 9 "$SCROT.jpg"    # scrot thumbnail @9% fulsize
-
     THUMB=$(find $CONFIGPATH -maxdepth 1 -type f -name "*-thumb.jpg" 2>/dev/null)
     mv $THUMB $CONFIGDIR
-
     # close root menu
     xdotool mousemove_relative --sync --polar 0 10 $MOUSECMD
     showGUIapp stop
-
     while read line; do
         WINDOW=$(echo $line | awk '{print $1}') # Window_ID is first field
         DTOP=$(echo $line | awk '{print $2}' )  # Desktop number is second field
         if [[ $DTOP = $CURRDTOP ]] 2>/dev/null;then
-            xdotool windowactivate "$WINDOW" 
+            xdotool windowactivate "$WINDOW"
         fi
     done < "$TMPSCROT"
     rm "$TMPSCROT"
@@ -624,7 +591,6 @@ function getScrot(){            # Get screenshot & create thumbnail
 }
 
 function restoreGTK(){   # $1 is chosen saved config dir
-
     GTKPATHS=( "$HOME" "$HOME" "$GTK3" "$GTK3x" )
     GTKSAVED=( "$1/$GTK2" "$1/$GTK2MINE" "$1/gtk-3.0" "$1/xfce4-notifyd.xml" )
     i=0
@@ -647,24 +613,20 @@ function restoreGTK(){   # $1 is chosen saved config dir
 }
 
 function restoreOBrc(){
-
-    RCFILE="$OBPATH/rc.xml" 
+    RCFILE="$OBPATH/rc.xml"
     THEMEFILE="$1/obtheme.txt"
     FTEMP="$1/temp.txt"
-
     if [[ $(grep "[OBTHEME]" "$1/settings.cfg" ) ]] &>/dev/null;then
         # backup rc.xml first
         NOW=$(date +"%Y%m%d-%H%M%S")
         RCBKP="$RCFILE.blob.$NOW"
         cp "$RCFILE" "$RCBKP"
-        
         # remove older backups
         for f in $(find $OBPATH -type f|grep .blob. );do
             if [[ $f -ot $RCBKP ]];then
                 rm "$f"
             fi
         done
-        
         ## put placeholder in place of <theme> section, write to tempfile
         sed -n "/<theme>/{:a;N;/<\/theme>/!ba;N;s/.*\n/THEMESECTION\n/};p" "$RCFILE" > $FTEMP
         # replace placeholder from theme file
@@ -680,7 +642,6 @@ function restoreOBrc(){
 }
 
 function restoreTint2(){      # write to tint2 session file
-
     echo "$1" | awk -F';' '{for(i=1; i<=NF; i++) print $i}' >> "$TINTSESSION"
     killTints
     while read tintline;do
@@ -690,7 +651,6 @@ function restoreTint2(){      # write to tint2 session file
 }
 
 function restoreDmenu(){
-
     DFILE="$1"
     if [[ -e $DMENUDIR ]];then        # backup DMENU first
         DMENUBKP="$DMENUDIR/$DMENU.bkp"
@@ -704,7 +664,6 @@ function restoreDmenu(){
 }
 
 function restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
-
     CMD="cp $1 $LDMDIR/$LDM"
     TXT="Authenticate restore of lightdm-gtk-greeter.conf"
     LOOP=1
@@ -729,7 +688,6 @@ function restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
 }
 
 function cleanup(){
-
     if [[ -d $CONFIGDIR ]];then
         rm -rf "$CONFIGDIR"
     fi
@@ -745,7 +703,6 @@ function cleanup(){
 }
 
 function saveSettings(){
-
     COLUMNS=(\
         "FALSE" "$PICKOB" \
         "FALSE" "$PICKGTK" \
@@ -818,7 +775,6 @@ function saveSettings(){
     TXT="<big><b><u>Openbox Configurations to be saved:</u></b></big>\n\n"
     TXT2=$(cat "$LISTMSG")
     NEW=$($DIALOG --text="$TXT$TXT2")
-
     if [[ $? = 1 ]];then
         cleanup save
         restoreSettings
@@ -828,7 +784,6 @@ function saveSettings(){
 }
 
 function ViewRestoreDialog(){  #   Display saved theme collections
-
     getSet          # get name of latest set BLOB config
     if [ $NUMDIRS -eq 0 ];then   # no saved configs; go back to Intro dialog
         Intro
@@ -837,7 +792,6 @@ function ViewRestoreDialog(){  #   Display saved theme collections
     setARR=()
     namesARR=()
     thumbsARR=()
-
     i=0
     for dir in "$CONFIGPATH"/* ;do
         if [[ -d $dir ]];then
@@ -851,15 +805,12 @@ function ViewRestoreDialog(){  #   Display saved theme collections
                 else
                     setARR[$i]="gtk-no"
                 fi
-
                 IMGTHUMB="None"     # Placeholder if no thumbnail found
                 f="$dir"/*"-thumb.jpg"
                 if [[ $f ]];then
                     IMGTHUMB="$f"
                 fi
-
                 thumbsARR[$i]="$IMGTHUMB"
-
                 CONFIGS="\""
                 while read line;do
                     CONFIGS="$CONFIGS $line\n"
@@ -870,18 +821,16 @@ function ViewRestoreDialog(){  #   Display saved theme collections
             i=$(($i+1))
         fi
     done
-
     for ((j=0; j<${#namesARR[*]}; j++));do
         DLGLIST="$DLGLIST ${setARR[j]} ${namesARR[j]} ${thumbsARR[j]}"
     done
 }
 
 function restoreSettings(){
-
     ViewRestoreDialog
     FPATH=""
     LOOP=1
-    while [[ $LOOP ]] ;do 
+    while [[ $LOOP ]] ;do
         CONFIG=$($DIALOGDEC --list --title="$TITLE" \
             --text="Double-click selection, or \"Enter\", or \"Restore\" to restore settings\n" \
             --separator=" " \
@@ -921,7 +870,7 @@ function restoreSettings(){
                     fi
                 fi
                 TEXT="Delete saved configurations <b>$FPATH</b>\nand screenshot?"
-                $DIALOG "$T$TEXT" "$CANCEL" "$OK" 2>/dev/null 
+                $DIALOG "$T$TEXT" "$CANCEL" "$OK" 2>/dev/null
                 if [[ $? = 0 ]];then
                     rm -rf "$FPATH"
                     rm "$FPATH.jpg"
@@ -955,9 +904,7 @@ function restoreSettings(){
                 ;;
         esac
     done
-
     SETCFG="$FPATH/settings.cfg"
-
     # Get chosen saved configs and restore them
     while read line;do
         TAG=$(echo $line | awk '{print $1}')
@@ -1006,7 +953,6 @@ function restoreSettings(){
 }
 
 function reloadGTK(){ # reload gtk theme after restoring saved config
-
 python - <<END
 import gtk
 
@@ -1024,7 +970,6 @@ END
 
 # test for blobthemes config directory, create if it doesn't exist
 mkdir -p "$CONFIGPATH"
-
 # create file to hold most recent saved configuration name
 if [[ ! -f $CURSESSION ]] 2>/dev/null;then
     touch "$CURSESSION"
