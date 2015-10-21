@@ -39,6 +39,12 @@
 #
 ########################################################################
 #
+# KNOWN ISSUES:
+# Virtualbox does not allow the guest to move the host mouse cursor, using xdotool,
+# so the screenshot may produce an incorrect theme displayed and/or poor positioning.
+# A workaround is to move the cursor to some free space, and use the "Enter" key in the
+# "Configurations to be saved:" dialog.
+#
 # TODO:
 # Deal with per-desktop conky situations;
 #
