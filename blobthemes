@@ -512,36 +512,36 @@ function getLightdm(){
 
 function setMouse(){
 
+    MONS=$(xrandr -q | grep -c " connected")
     RC="$OBPATH/rc.xml"
-    if (( $M0N == 1 ));then
-        MOVE_R=-40  # % move for menu
-        MOVE_V=-40
-    else
-        MOVE_R=-20  # % move for menu, dual monitors
-        MOVE_V=-20
-    fi
-
-    if [[ $1 = app ]];then
+    if [[ $1 = menu ]];then
+        if (( $MONS == 1 ));then
+            MOVE_R=-40  # % move for menu
+            MOVE_V=-40
+        else
+            MOVE_R=-20  # % move for dual monitors
+            MOVE_V=-20
+        fi
+    elif [[ $1 = app ]];then
         if grep ">Smart<" "$RC" &>/dev/null;then
             cp "$RC" "$RC.blobbkp"
             sed -i 's/>Smart</>UnderMouse</g' "$RC"
             openbox --reconfigure
         fi
-    if (( $M0N == 1 ));then
-        MOVE_R=10  # % move for app window
-        MOVE_V=10
-    else
-        MOVE_R=5  # % move for dual monitors
-        MOVE_V=5
-    fi
-
+        if (( $MONS == 1 ));then
+            MOVE_R=10  # % move for app window
+            MOVE_V=10
+        else
+            MOVE_R=5  # % move for dual monitors
+            MOVE_V=5
+        fi
     fi
     # Set mouse position, for appearance of root-menu
     screenW=$(xrandr -q | awk '/Screen/ {print $8}')
     screenH=$(xrandr -q | awk '/Screen/ {print $10}')
     screenH=${screenH%,}
 
-    if (( $MON == 1 ));then # single monitor
+    if (( $MONS == 1 ));then # single monitor
         posX=$(( screenW/2 + (screenW/100)*MOVE_R ))
     else
         posX=$(( screenW/4 + (screenW/100)*MOVE_R ))
@@ -552,7 +552,7 @@ function setMouse(){
 
 function ShowRootMenu(){ # Display root menu for screenshot
 
-    setMouse    # Move mouse
+    setMouse menu   # Move mouse
     # display "Menu -> Preferences" as an example
     # (Adjust the moves to display the entry you want!)
     xdotool $MOUSECMD && \
@@ -613,7 +613,7 @@ function getScrot(){            # Get screenshot & create thumbnail
     while read line; do
         WINDOW=$(echo $line | awk '{print $1}') # Window_ID is first field
         DTOP=$(echo $line | awk '{print $2}' )  # Desktop number is second field
-        if [[ $DTOP = $CURRDTOP ]];then
+        if [[ $DTOP = $CURRDTOP ]] 2>/dev/null;then
             xdotool windowactivate "$WINDOW" 
         fi
     done < "$TMPSCROT"
