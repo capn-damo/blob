@@ -112,7 +112,7 @@ TXTINTRO="<big><b>BunsenLabs\n\nOpenbox Configuration Manager</b></big>\n\n\n \
 ### USER OB ACTIONS
 MENUMODIFIER="super+space"  # keybind for show root-menu
 MOUSECMD="click 3"          # mouse r-click
-KEYDOWN=14           # adjust this for where "Preferences" is in the menu
+KEYDOWN=13           # adjust this for where "Preferences" is in the menu
 #### END VARIABLES #####################################################
 
 ### FUNCTIONS ##########################################################
@@ -488,95 +488,59 @@ function getLightdm(){
     fi
 }
 
-function setMouse(){
-    MONS=$(xrandr -q | grep -c " connected")
-    RC="$OBPATH/rc.xml"
-    if [[ $1 = menu ]];then
-        if (( $MONS == 1 ));then
-            MOVE_R=-40  # % move for menu
-            MOVE_V=-40
-        else
-            MOVE_R=-20  # % move for dual monitors
-            MOVE_V=-20
-        fi
-    elif [[ $1 = app ]];then
-        if grep ">Smart<" "$RC" &>/dev/null;then
-            cp "$RC" "$RC.blobbkp"
-            sed -i 's/>Smart</>UnderMouse</g' "$RC"
-            openbox --reconfigure
-        fi
-        if (( $MONS == 1 ));then
-            MOVE_R=10  # % move for app window
-            MOVE_V=10
-        else
-            MOVE_R=5  # % move for dual monitors
-            MOVE_V=5
-        fi
-    fi
+function getScrot(){
+    pid=""
+    TMPSCROT="$CONFIGPATH/tmpscrot.tmp"
+    SCROT="$CONFIGPATH/$ANS"
+    CURRDTOP=$(xprop -root _NET_CURRENT_DESKTOP | tail -c -2) # desktop number
+    MONS=$(xrandr -q | grep -c " connected")    # number of monitors
     # Set mouse position, for appearance of root-menu
     screenW=$(xrandr -q | awk '/Screen/ {print $8}')
     screenH=$(xrandr -q | awk '/Screen/ {print $10}')
     screenH=${screenH%,}
+    
     if (( $MONS == 1 ));then # single monitor
-        posX=$(( screenW/2 + (screenW/100)*MOVE_R ))
+        appX=$(( (screenW/20)*8 ))
+        menuX=$(( (screenW/20)*2 ))
     else
-        posX=$(( screenW/4 + (screenW/100)*MOVE_R ))
+        appX=$(( (screenW/20)*4 ))
+        menuX=$(( (screenW/20)*1 ))
     fi
-    posY=$(( screenH/2 + (screenH/100)*MOVE_V ))
-    xdotool mousemove --sync $posX $posY
-}
+    appY=$(( (screenH/20)*4 ))
+    menuY=$(( (screenH/20)*4 ))
 
-function ShowRootMenu(){ # Display root menu for screenshot
-    setMouse menu   # Move mouse
-    # display "Menu -> Preferences" as an example
-    # (Adjust the moves to display the entry you want!)
-    xdotool key --clearmodifiers "$MENUMODIFIER"
-    i=1
-    while [ $i -le $KEYDOWN ];do 
-        xdotool key Down
-        i=$(( $i+1 ))
-    done
-    sleep 0.2 && xdotool key Right && sleep 0.2
-}
-
-function showGUIapp(){   # start lxappearance to show gtk/OB theme for screenshot
-    if [[ $1 = start ]];then
-        if [[ $(type lxappearance) ]];then
-            setMouse app
-            lxappearance &
-            pid=$!
-        fi
-    elif [[ $1 = stop ]];then
-        if [[ $(pgrep lxappearance | grep $pid) ]];then
-            kill -9 $pid &>/dev/null
-        fi
-    fi
-    # restore rc.xml from backup if necessary
-    if [[ -e "$OBPATH/rc.xml.blobbkp" ]] 2>/dev/null;then
-        mv $OBPATH/rc.xml.blobbkp $OBPATH/rc.xml
-        echo -e "\nRestored rc.xml from backup"
-    fi
-}
-
-function getScrot(){            # Get screenshot & create thumbnail
-    TMPSCROT="$CONFIGPATH/tmpscrot.tmp"
-    SCROT="$CONFIGPATH/$ANS"
-    # get current desktop number
-    CURRDTOP=$(xprop -root _NET_CURRENT_DESKTOP | tail -c -2)
     wmctrl -l -x > "$TMPSCROT"      # store window list in tempfile
     wmctrl -k on                    # hide windows, show desktop
     # show any conkys which have been hidden by wmctrl, (ie not own_window_type desktop)
     for CONK in $(xdotool search --classname "Conky");do
         xdotool windowactivate "$CONK"
     done
-    showGUIapp start && sleep 0.5   # show lxappearance for the scrot
-    ShowRootMenu && sleep 0.5    # display root menu for the scrot
-    scrot -t 9 "$SCROT.jpg"    # scrot thumbnail @9% fulsize
+    # start lxappearance
+    lxappearance &
+    pid=$!
+    sleep 0.5
+    # get lx window, make sure it loses focus, then move mouse and start root-menu
+    LX=$(xdotool getwindowfocus)
+    xdotool windowmove --sync $LX $appX $appY && sleep 0.1 && \
+    xdotool mousemove --sync --window $LX -- -50 0 && xdotool click 1
+    xdotool mousemove --sync $menuX $menuY && xdotool key --clearmodifiers "super+space"
+    i=1
+    while [ $i -le $KEYDOWN ];do 
+        xdotool key --delay 30 Down 
+        i=$(( $i+1 ))
+    done
+    xdotool key --delay 20 Right && sleep 0.3
+    # take scrot
+    scrot -t 9 "$SCROT.jpg"    # scrot thumbnail @9% fullsize
     THUMB=$(find $CONFIGPATH -maxdepth 1 -type f -name "*-thumb.jpg" 2>/dev/null)
     mv $THUMB $CONFIGDIR
     # close root menu
-    xdotool mousemove_relative --sync --polar 0 10 $MOUSECMD
-    showGUIapp stop
+    xdotool mousemove_relative --sync --polar 0 10 click 3
+    # kill lxappearance
+    if [[ $(pgrep lxappearance | grep $pid) ]];then
+        kill -9 $pid &>/dev/null
+    fi
+    # restore hidden windows
     while read line; do
         WINDOW=$(echo $line | awk '{print $1}') # Window_ID is first field
         DTOP=$(echo $line | awk '{print $2}' )  # Desktop number is second field
@@ -585,9 +549,6 @@ function getScrot(){            # Get screenshot & create thumbnail
         fi
     done < "$TMPSCROT"
     rm "$TMPSCROT"
-    THUMB=$(basename $THUMB)
-    echo -e "\n  Screenshot saved as: $CONFIGPATH/$ANS.jpg"
-    echo -e "\n  Screenshot thumbnail saved as: $CONFIGDIR/$THUMB"
 }
 
 function restoreGTK(){   # $1 is chosen saved config dir
