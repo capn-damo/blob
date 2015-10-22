@@ -210,7 +210,7 @@ function setName(){  # set name of collection, make dir and session settings fil
             $CANCEL --button="OK:0" \
             "$T$MSG" \
             2>/dev/null )
-        if [[ $? = 1 ]] ;then # Cancel was selected
+        if (( $? == 1 )) ;then # Cancel was selected
             Intro
         elif [[ ! $ANS ]] ;then     # entry was empty
             $DIALOG --image="dialog-question" \
@@ -219,7 +219,7 @@ function setName(){  # set name of collection, make dir and session settings fil
             2>/dev/null
             RET=$?
             echo -e "\n  No name entered for new collection!" 2>&1
-            if [[ $RET = 0 ]];then
+            if (( $RET == 0 ));then
                 continue
             else
                 Intro
@@ -235,7 +235,7 @@ function setName(){  # set name of collection, make dir and session settings fil
                 "$CANCEL" "$OK" \
                 --width=300 \
                 2>/dev/null
-                if [[ $? = 0 ]];then
+                if (( $? == 0 ));then
                     mv {"$CONFIGDIR","$CONFIGDIR-BKP"} && mkdir -p "$CONFIGDIR"
                     DEL=1
                     SETTINGS="$CONFIGDIR/settings.cfg"
@@ -255,13 +255,20 @@ function setName(){  # set name of collection, make dir and session settings fil
             break
         fi
     done
+    setText
+}
+
+function setText(){
     TIME=$(date)
-    if [[ $DEL = 1 ]];then
+    if (( $DEL == 1 ));then
         TXT="  (Existing session overwritten)"
     else
         TXT=""
     fi
     echo -e "\n  Configuration will be saved as: $ANS$TXT"
+    if [[ $1 = repeat ]];then
+        > "$LISTMSG"    # reset LISTNSG.txt
+    fi
     # Store list in listfile
     echo -e "<b>Configuration name: $ANS</b>\t$TXT\nSaved at $TIME\n" >> "$LISTMSG"
 }
@@ -460,7 +467,7 @@ function getGTKname(){   # get GTK theme name
         if [[ $(echo $line | grep "gtk-theme-name" ) ]] &>/dev/null;then
             GTKTHEME=$(echo $line | awk -F '"' '{print $2}')
         fi
-    done < $GTKFILE
+    done < "$GTKFILE"
     TXT="GTK theme:  $GTKTHEME\n"
     echo -e "\n  Saved $TXT"
     echo "$TXT" >> "$LISTMSG"
@@ -688,13 +695,16 @@ function restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
 }
 
 function cleanup(){
-    if [[ -d $CONFIGDIR ]];then
-        rm -rf "$CONFIGDIR"
+    if [[ $1 = all ]];then
+        if [[ -d $CONFIGDIR ]];then
+            rm -rf "$CONFIGDIR"
+            echo -e "\n  Deleted $CONFIGDIR"
+        fi
+        if [[ -d $CONFIGDIR-BKP ]];then
+            mv {"$CONFIGDIR-BKP","$CONFIGDIR"}
+            echo -e "\n  Cancelled\n..Temporary $CONFIGDIR restored\n"
+        fi
     fi
-    if [[ -d $CONFIGDIR-BKP ]];then
-        mv {"$CONFIGDIR-BKP","$CONFIGDIR"}
-    fi
-    echo -e "\n  Cancelled\n..Temporary $CONFIGDIR deleted\n"
     if [[ $1 = save ]];then
         saveSettings
     else
@@ -713,15 +723,15 @@ function saveSettings(){
         "FALSE" "$PICKLDM" \
         )
     SLOOP=1
-    while [[ $SLOOP = 1 ]];do
+    while (( $SLOOP == 1 ));do
         CHOICE=$($DIALOG --list --checklist --title \
             --text="Choose the configs you want to save..." \
             $CANCEL $OK \
             --width=340 --height=340 \
             --column="Select" --column="Config" "${COLUMNS[@]}" \
             2>/dev/null )
-        if [[ $? = 1 ]]; then # cancel button pressed
-            cleanup
+        if (( $? == 1 )); then # cancel button pressed
+            cleanup all
         else
             if [[ ! $CHOICE ]] ; then # entry field is empty, so try again
                 RET=$($DIALOG  --image="dialog-question" \
@@ -729,11 +739,12 @@ function saveSettings(){
                 $EXIT $OK \
                 --width=300 \
                 2>/dev/null )
-                if [[ $? = 1 ]];then
-                    cleanup
+                if (( $? == 1 ));then
+                    cleanup all
                 fi
             else
                 i=0
+                retChoice=()
                 OIFS=$IFS # save Internal Field Separator
                 IFS=$"|" # separator is "|" in returned choices
                 # dialog return is in format 'TRUE|value|\nTRUE|value'
@@ -775,8 +786,8 @@ function saveSettings(){
     TXT="<big><b><u>Openbox Configurations to be saved:</u></b></big>\n\n"
     TXT2=$(cat "$LISTMSG")
     NEW=$($DIALOG --text="$TXT$TXT2")
-    if [[ $? = 1 ]];then
-        cleanup save
+    if (( $? == 1 ));then
+        cleanup all
         restoreSettings
     else
         echo "$ANS" > "$CURSESSION"     # replace entry in saved config flag file
@@ -785,7 +796,7 @@ function saveSettings(){
 
 function ViewRestoreDialog(){  #   Display saved theme collections
     getSet          # get name of latest set BLOB config
-    if [ $NUMDIRS -eq 0 ];then   # no saved configs; go back to Intro dialog
+    if (( $NUMDIRS == 0 ));then   # no saved configs; go back to Intro dialog
         Intro
     fi
     DLGLIST=""
@@ -854,7 +865,7 @@ function restoreSettings(){
                 TEXT="Restoring Configs saved as <big>$DIR</big>\n\n"
                 TEXT="$TEXT$(cat $SAVED)"
                 $DIALOG "$T$TEXT" "$CANCEL" "$OK" 2>/dev/null
-                if [[ $? = 0 ]];then
+                if (( $? == 0 ));then
                     echo $(basename $FPATH) > "$CURSESSION"
                     break
                 fi
@@ -871,13 +882,13 @@ function restoreSettings(){
                 fi
                 TEXT="Delete saved configurations <b>$FPATH</b>\nand screenshot?"
                 $DIALOG "$T$TEXT" "$CANCEL" "$OK" 2>/dev/null
-                if [[ $? = 0 ]];then
+                if (( $? == 0 ));then
                     rm -rf "$FPATH"
                     rm "$FPATH.jpg"
                     echo -e "\n$DIR DELETED"
                     currentsession=$(cat $CURSESSION)
                     fpath=$(basename $FPATH)
-                    if [ "$currentsession" = "$fpath" ];then
+                    if [[ $currentsession = $fpath ]];then
                         echo "" > "$CURSESSION"
                     fi
                     restoreSettings
@@ -895,7 +906,7 @@ function restoreSettings(){
                 fi
                 restoreSettings
                 ;;
-            *)  if [[ $RET = 252 ]];then
+            *)  if (( $RET == 252 ));then
                     echo -e "\n  Exited with \"ESC\" key"
                 else
                     echo -e "\n  Error= $RET" 2>&1
