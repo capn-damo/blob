@@ -552,7 +552,7 @@ function getScrot(){
     while read line; do
         WINDOW=$(echo $line | awk '{print $1}') # Window_ID is first field
         DTOP=$(echo $line | awk '{print $2}' )  # Desktop number is second field
-        if (( $DTOP == $CURRDTOP )) 2>/dev/null;then
+        if (( $DTOP == $CURRDTOP )) &>/dev/null;then
             xdotool windowactivate "$WINDOW"
         fi
     done < "$TMPSCROT"
@@ -944,7 +944,7 @@ END
 # test for blobthemes config directory, create if it doesn't exist
 mkdir -p "$CONFIGPATH"
 # create file to hold most recent saved configuration name
-if [[ ! -f $CURSESSION ]] 2>/dev/null;then
+if [[ ! -f $CURSESSION ]] &>/dev/null;then
     touch "$CURSESSION"
 fi
 countMonitors
