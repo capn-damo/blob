@@ -51,7 +51,6 @@
 #### VARIABLES #########################################################
 CONFIGPATH="$HOME/.config/blob"
 SETTINGS=""
-TEMPFILE="$HOME/blob.tmp"
 OBPATH="$HOME/.config/openbox"
 CURSESSION="$CONFIGPATH/current"
 CONFIGDIR=""
@@ -349,10 +348,11 @@ function getConky(){
     CONKYCMD=""
     LISTMSGTXT=""
     TXT=""
+    CONKYTEMP=$(mktemp)
     if [[ $(pidof conky) ]];then    # get full command of running conkys
-        > "$TEMPFILE"
+        > "$CONKYTEMP"
         pgrep -a conky | while read pid CMD;do
-            echo "$CMD;" >> "$TEMPFILE"
+            echo "$CMD;" >> "$CONKYTEMP"
         done
         TXT="Conkys:\n\n"
         DEF="Default"
@@ -367,9 +367,9 @@ function getConky(){
             fi
             TXT="$TXT$line"
             LISTMSGTXT="$LISTMSGTXT\n\t$line"
-        done < "$TEMPFILE"
+        done < "$CONKYTEMP"
         echo "[CONKY] $CONKYCMD" >> "$SETTINGS"
-        rm "$TEMPFILE"
+        rm ${CONKYTEMP}
         echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
     else
         $DIALOG --form --image="dialog-warning" \
@@ -390,11 +390,11 @@ function checkConkyzen(){    # see if bl-conkyzen and session file present
 }
 
 function getTint(){
-    > "$TEMPFILE" # make blank tempfile, to save running tint2 paths
+    TEMPTINT=$(mktemp) # make blank tempfile, to save running tint2 paths
     pgrep -a tint2 | while read pid cmd;do
         if [[ ${cmd%% *} = tint2 ]];then
             TPATH=$(echo "$cmd" | awk '{print $NF}')
-            echo "$TPATH;" >> "$TEMPFILE"
+            echo "$TPATH;" >> "$TEMPTINT"
         fi
     done
     TXT="Tint2s:\n\n"
@@ -411,9 +411,9 @@ function getTint(){
             TINTCMD="$TINTCMD$LINE;"
             LISTMSGTXT="$LISTMSGTXT\n\t$LINE"
         fi
-    done < "$TEMPFILE"
+    done < "$TEMPTINT"
     echo "[TINT2] $TINTCMD" >> "$SETTINGS"
-    rm "$TEMPFILE"
+    rm ${TEMPTINT}
     echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
 }
 
@@ -498,7 +498,7 @@ function getLightdm(){
 
 function getScrot(){
     pid=""
-    TMPSCROT="$CONFIGPATH/tmpscrot.tmp"
+    TMPSCROT=$(mktemp)
     SCROT="$CONFIGPATH/$ANS"
     CURRDTOP=$(xprop -root _NET_CURRENT_DESKTOP | tail -c -2) # desktop number
     MONS=$(xrandr -q | grep -c " connected")    # number of monitors
@@ -556,7 +556,7 @@ function getScrot(){
             xdotool windowactivate "$WINDOW"
         fi
     done < "$TMPSCROT"
-    rm "$TMPSCROT"
+    rm ${TMPSCROT}
 }
 
 function restoreGTK(){   # $1 is chosen saved config dir
@@ -584,7 +584,7 @@ function restoreGTK(){   # $1 is chosen saved config dir
 function restoreOBrc(){
     RCFILE="$OBPATH/rc.xml"
     THEMEFILE="$1/obtheme.txt"
-    FTEMP="$1/temp.txt"
+    FTEMP=$(mktemp)
     if [[ $(grep "[OBTHEME]" "$1/settings.cfg" ) ]] &>/dev/null;then
         # backup rc.xml first
         NOW=$(date +"%Y%m%d-%H%M%S")
@@ -606,7 +606,7 @@ function restoreOBrc(){
         sed -i '/^$/d' $FTEMP   # remove empty lines
         cp $FTEMP "$RCFILE"     # overwrite rc.xml
         echo -e "\n  rc.xml backed up and edited for OB theme"
-        rm $FTEMP
+        rm ${FTEMP}
     fi
 }
 
@@ -941,7 +941,6 @@ END
 }
 
 ### END FUNCTIONS ######################################################
-
 # test for blobthemes config directory, create if it doesn't exist
 mkdir -p "$CONFIGPATH"
 # create file to hold most recent saved configuration name
