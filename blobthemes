@@ -120,7 +120,7 @@ KEYDOWN=13           # adjust this for where "Preferences" is in the menu
 function Intro(){
     getSet
     #  If blob/ is empty, then don't display "Save Settings" option in Intro dialog
-    if [[ $NUMDIRS -gt 0 ]];then
+    if (( $NUMDIRS > 0 ));then
         INTRO=$($DIALOGDEC $IMG$IMGPATH "$T$TXTINTRO" \
         --title="$TITLE" \
         --button="Save Settings:0" --button="View Saved:2" $CLOSE \
@@ -167,7 +167,7 @@ function getSet(){      # get name of currently set BLOB config
         if [[ -f $CURSESSION ]];then
             rm $CURSESSION
         fi
-    elif [[ $NUMDIRS -gt 0 ]] && [[ -f $CURSESSION ]];then
+    elif (( $NUMDIRS > 0 )) && [[ -f $CURSESSION ]];then
         SET=$(cat $CURSESSION)
     fi
 }
@@ -533,7 +533,7 @@ function getScrot(){
     xdotool mousemove --sync --window $LX -- -50 0 && xdotool click 1
     xdotool mousemove --sync $menuX $menuY && xdotool key --clearmodifiers "super+space"
     i=1
-    while [ $i -le $KEYDOWN ];do 
+    while (( $i <= $KEYDOWN ));do 
         xdotool key --delay 30 Down 
         i=$(( $i+1 ))
     done
@@ -552,7 +552,7 @@ function getScrot(){
     while read line; do
         WINDOW=$(echo $line | awk '{print $1}') # Window_ID is first field
         DTOP=$(echo $line | awk '{print $2}' )  # Desktop number is second field
-        if [[ $DTOP = $CURRDTOP ]] 2>/dev/null;then
+        if (( $DTOP == $CURRDTOP )) 2>/dev/null;then
             xdotool windowactivate "$WINDOW"
         fi
     done < "$TMPSCROT"
@@ -834,7 +834,7 @@ function restoreSettings(){
                 ;;
             1)  exit 0
                 ;;
-            2)   if ! [[ $CONFIG ]];then
+            2)   if [[ ! $CONFIG ]];then
                     $DIALOG --text="Make a selection before trying to delete" "$EXIT" "$OK"
                     if (( $? == 0 ));then
                         continue
