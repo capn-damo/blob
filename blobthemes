@@ -259,28 +259,20 @@ function setName(){  # set name of collection, make dir and session settings fil
             break
         fi
     done
-<<<<<<< HEAD
-    TIME=$(date)
-    if [[ $DEL = 1 ]];then
-=======
     setText
 }
 
 function setText(){
     TIME=$(date)
     if (( $DEL == 1 ));then
->>>>>>> setmouse
         TXT="  (Existing session overwritten)"
     else
         TXT=""
     fi
     echo -e "\n  Configuration will be saved as: $ANS$TXT"
-<<<<<<< HEAD
-=======
     if [[ $1 = repeat ]];then
         > "$LISTMSG"    # reset LISTNSG.txt
     fi
->>>>>>> setmouse
     # Store list in listfile
     echo -e "<b>Configuration name: $ANS</b>\t$TXT\nSaved at $TIME\n" >> "$LISTMSG"
 }
@@ -706,32 +698,6 @@ function restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
     done
 }
 
-function cleanup(){
-<<<<<<< HEAD
-    if [[ -d $CONFIGDIR ]];then
-        rm -rf "$CONFIGDIR"
-    fi
-    if [[ -d $CONFIGDIR-BKP ]];then
-        mv {"$CONFIGDIR-BKP","$CONFIGDIR"}
-=======
-    if [[ $1 = all ]];then
-        if [[ -d $CONFIGDIR ]];then
-            rm -rf "$CONFIGDIR"
-            echo -e "\n  Deleted $CONFIGDIR"
-        fi
-        if [[ -d $CONFIGDIR-BKP ]];then
-            mv {"$CONFIGDIR-BKP","$CONFIGDIR"}
-            echo -e "\n  Cancelled\n..Temporary $CONFIGDIR restored\n"
-        fi
->>>>>>> setmouse
-    fi
-    if [[ $1 = save ]];then
-        saveSettings
-    else
-        Intro
-    fi
-}
-
 function saveSettings(){
     COLUMNS=(\
         "FALSE" "$PICKOB" \
@@ -806,13 +772,8 @@ function saveSettings(){
     TXT="<big><b><u>Openbox Configurations to be saved:</u></b></big>\n\n"
     TXT2=$(cat "$LISTMSG")
     NEW=$($DIALOG --text="$TXT$TXT2")
-<<<<<<< HEAD
-    if [[ $? = 1 ]];then
-        cleanup save
-=======
     if (( $? == 1 ));then
         cleanup all
->>>>>>> setmouse
         restoreSettings
     else
         echo "$ANS" > "$CURSESSION"     # replace entry in saved config flag file
@@ -907,11 +868,8 @@ function restoreSettings(){
                 fi
                 TEXT="Delete saved configurations <b>$FPATH</b>\nand screenshot?"
                 $DIALOG "$T$TEXT" "$CANCEL" "$OK" 2>/dev/null
-<<<<<<< HEAD
-                if [[ $? = 0 ]];then
-=======
+
                 if (( $? == 0 ));then
->>>>>>> setmouse
                     rm -rf "$FPATH"
                     rm "$FPATH.jpg"
                     echo -e "\n$DIR DELETED"
