@@ -235,11 +235,8 @@ function setName(){  # set name of collection, make dir and session settings fil
                 "$CANCEL" "$OK" \
                 --width=300 \
                 2>/dev/null
-<<<<<<< HEAD
-                if [[ $? = 0 ]];then
-=======
+
                 if (( $? == 0 ));then
->>>>>>> setmouse
                     mv {"$CONFIGDIR","$CONFIGDIR-BKP"} && mkdir -p "$CONFIGDIR"
                     DEL=1
                     SETTINGS="$CONFIGDIR/settings.cfg"
@@ -657,6 +654,24 @@ function restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
                     ;;
         esac
     done
+}
+
+function cleanup(){
+    if [[ $1 = all ]];then
+        if [[ -d $CONFIGDIR ]];then
+            rm -rf "$CONFIGDIR"
+            echo -e "\n  Deleted $CONFIGDIR"
+        fi
+        if [[ -d $CONFIGDIR-BKP ]];then
+            mv {"$CONFIGDIR-BKP","$CONFIGDIR"}
+            echo -e "\n  Cancelled\n..Temporary $CONFIGDIR restored\n"
+        fi
+    fi
+    if [[ $1 = save ]];then
+        saveSettings
+    else
+        Intro
+    fi
 }
 
 function saveSettings(){
