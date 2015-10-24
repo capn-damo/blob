@@ -144,9 +144,7 @@ function Intro(){
                 rm -rf "$CONFIGDIR-BKP"
                 echo -e "\n  Temporary $CONFIGDIR deleted\n"
             fi
-            if [[ $? ]];then
-                restoreSettings
-            fi
+            restoreSettings
             ;;
         1)  echo "CANCELLED..."
             exit 0
