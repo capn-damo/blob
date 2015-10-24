@@ -348,7 +348,7 @@ function getConky(){
     CONKYCMD=""
     LISTMSGTXT=""
     TXT=""
-    CONKYTEMP=$(mktemp)
+    CONKYTEMP=$(mktemp --tmpdir blob.XXXX)
     if [[ $(pidof conky) ]];then    # get full command of running conkys
         > "$CONKYTEMP"
         pgrep -a conky | while read pid CMD;do
@@ -369,7 +369,7 @@ function getConky(){
             LISTMSGTXT="$LISTMSGTXT\n\t$line"
         done < "$CONKYTEMP"
         echo "[CONKY] $CONKYCMD" >> "$SETTINGS"
-        rm ${CONKYTEMP}
+        rm -f "$CONKYTEMP"
         echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
     else
         $DIALOG --form --image="dialog-warning" \
@@ -390,7 +390,7 @@ function checkConkyzen(){    # see if bl-conkyzen and session file present
 }
 
 function getTint(){
-    TEMPTINT=$(mktemp) # make blank tempfile, to save running tint2 paths
+    TEMPTINT=$(mktemp --tmpdir blob.XXXX) # make blank tempfile, to save running tint2 paths
     pgrep -a tint2 | while read pid cmd;do
         if [[ ${cmd%% *} = tint2 ]];then
             TPATH=$(echo "$cmd" | awk '{print $NF}')
@@ -413,7 +413,7 @@ function getTint(){
         fi
     done < "$TEMPTINT"
     echo "[TINT2] $TINTCMD" >> "$SETTINGS"
-    rm ${TEMPTINT}
+    rm -f "$TEMPTINT"
     echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
 }
 
@@ -498,7 +498,7 @@ function getLightdm(){
 
 function getScrot(){
     pid=""
-    TMPSCROT=$(mktemp)
+    TMPSCROT=$(mktemp --tmpdir blob.XXXX)
     SCROT="$CONFIGPATH/$ANS"
     CURRDTOP=$(xprop -root _NET_CURRENT_DESKTOP | tail -c -2) # desktop number
     MONS=$(xrandr -q | grep -c " connected")    # number of monitors
@@ -556,7 +556,7 @@ function getScrot(){
             xdotool windowactivate "$WINDOW"
         fi
     done < "$TMPSCROT"
-    rm ${TMPSCROT}
+    rm -f "$TMPSCROT"
 }
 
 function restoreGTK(){   # $1 is chosen saved config dir
@@ -584,7 +584,7 @@ function restoreGTK(){   # $1 is chosen saved config dir
 function restoreOBrc(){
     RCFILE="$OBPATH/rc.xml"
     THEMEFILE="$1/obtheme.txt"
-    FTEMP=$(mktemp)
+    FTEMP=$(mktemp --tmpdir blob.XXXX)
     if [[ $(grep "[OBTHEME]" "$1/settings.cfg" ) ]] &>/dev/null;then
         # backup rc.xml first
         NOW=$(date +"%Y%m%d-%H%M%S")
@@ -606,7 +606,7 @@ function restoreOBrc(){
         sed -i '/^$/d' $FTEMP   # remove empty lines
         cp $FTEMP "$RCFILE"     # overwrite rc.xml
         echo -e "\n  rc.xml backed up and edited for OB theme"
-        rm ${FTEMP}
+        rm -f "$FTEMP"
     fi
 }
 
@@ -666,6 +666,7 @@ function cleanup(){
             mv {"$CONFIGDIR-BKP","$CONFIGDIR"}
             echo -e "\n  Cancelled\n..Temporary $CONFIGDIR restored\n"
         fi
+        rm -f /tmp/blob.*
     fi
     if [[ $1 = save ]];then
         saveSettings
