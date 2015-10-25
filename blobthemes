@@ -117,6 +117,7 @@ KEYDOWN=13           # adjust this for where "Preferences" is in the menu
 ### FUNCTIONS ##########################################################
 
 function Intro(){
+    local INTRO RET
     getSet
     #  If blob/ is empty, then don't display "Save Settings" option in Intro dialog
     if (( $NUMDIRS > 0 ));then
@@ -144,9 +145,7 @@ function Intro(){
                 rm -rf "$CONFIGDIR-BKP"
                 echo -e "\n  Temporary $CONFIGDIR deleted\n"
             fi
-            if [[ $? ]];then
-                restoreSettings
-            fi
+            restoreSettings
             ;;
         1)  echo "CANCELLED..."
             exit 0
