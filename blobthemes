@@ -108,7 +108,8 @@ TXTINTRO="<big><b>BunsenLabs\n\nOpenbox Configuration Manager</b></big>\n\n\n \
 \t\t+ Screenshot\n\n"
 ### END DIALOG VARIABLES
 
-### USER OB ACTIONS
+### USER SETTINGS
+IMGCMD="bl-image-viewer"    # application command to view screenshot
 MENUMODIFIER="super+space"  # keybind for show root-menu
 MOUSECMD="click 3"          # mouse r-click
 KEYDOWN=13           # adjust this for where "Preferences" is in the menu
@@ -887,7 +888,7 @@ function restoreSettings(){
                 SEL=$(echo "$CONFIG" | awk -F'[>|<]' '{print $3}' )
                 if [[ $SEL ]];then
                     IMG="$CONFIGPATH/$SEL.jpg"
-                    bl-image-viewer "$IMG"
+                    $IMGCMD "$IMG"
                 else
                     $DIALOG --text="Make a selection"
                 fi
