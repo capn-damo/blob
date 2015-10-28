@@ -905,6 +905,13 @@ function restoreSettings(){
     done
     SETCFG="$FPATH/settings.cfg"
     # Get chosen saved configs and restore them
+    # kill conkys and tint2s, in case saved config doesn't include them
+    if [[ $(pidof conky) ]];then
+        killall conky
+    fi
+    if [[ $(pidof tint2) ]];then
+        killall tint2
+    fi
     while read line;do
         TAG=$(echo $line | awk '{print $1}')
         VAL=$(echo $line | awk '{print $2}')
