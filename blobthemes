@@ -821,7 +821,7 @@ function restoreSettings(){
         CONFIG=$($DIALOGDEC --list --title="$TITLE" \
             --text="Double-click selection, or \"Enter\", or \"Restore\" to restore settings\n" \
             --separator=" " \
-            --button="Add New:3" \
+            --button="View image:4" --button="Add New:3" \
             --button="Delete:2" --button="Restore:0" --button="gtk-quit:1" \
             --always-print-result \
             --width=$W --height=$H --center --image-preview \
@@ -880,6 +880,16 @@ function restoreSettings(){
                 if [[ -d $CONFIGDIR-BKP ]];then
                     rm -rf "$CONFIGDIR-BKP"
                     echo -e "\n  Temporary $CONFIGDIR deleted\n"
+                fi
+                restoreSettings
+                ;;
+            4)  # show screenshot in image viewer
+                SEL=$(echo "$CONFIG" | awk -F'[>|<]' '{print $3}' )
+                if [[ $SEL ]];then
+                    IMG="$CONFIGPATH/$SEL.jpg"
+                    bl-image-viewer "$IMG"
+                else
+                    $DIALOG --text="Make a selection"
                 fi
                 restoreSettings
                 ;;
