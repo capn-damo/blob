@@ -2,7 +2,7 @@
 #
 # blobthemes: script to save or restore openbox gui configurations
 #
-# (Requires yad, wmctrl, xdotool, xrandr, nitrogen|feh)
+# (Requires yad, wmctrl, xdotool, xrandr, scrot, nitrogen|feh)
 #
 # Written for BunsenLabs by damo <damo@bunsenlabs.org> October 2015
 #
@@ -17,25 +17,28 @@
 #
 # Paths are assumed to be BunsenLabs defaults
 #
-# WARNING: It is assumed that the conkys are not being run via a script, so
-# they will appear on all desktops. If you usually use a script, then you
-# may have to make your own arrangements! Conkys in non-default directories
-# can be saved, but will not be seen when running bl-conkyzen.
-#
 # A Screenshot is saved (Windows are hidden briefly so the image
 #                        is the bare desktop, with any Tint2s
 #                        or Conkys which are running, and a representive
-#                        menu open)
+#                        menu and window open)
 #
 # A time-stamped backup of rc.xml is saved "just in case".
 #
 # The dialog icon is "Bunsenlabs-flame-256.svg": put it in /usr/share/pixmaps.
 #
-# xdotool is used to move the mouse pointer, and assumes the root-menu is shown.
-# with "Super + Space" keys, and the right mouse button is set for r-click.
-# If you have set these to something else, then edit the "MENUMODIFIER" and
-# MOUSECMD variables. Set the variable "KEYDOWN" to where "Preferences" is
-# in the root-menu (or anything else you might want displayed).
+# USER VARIABLE: xdotool is used to move the mouse pointer, and assumes the
+# root-menu is shown with "Super + Space" keys, and the right mouse button is
+# set for "r-click". If you have set these to something else, then edit the
+# "MENUMODIFIER" and "MOUSECMD" variables.
+# Set the variable "KEYDOWN" to where "Preferences" is in the root-menu (or
+# anything else you might want displayed).
+# The image viewer is set to be "bl-image-viewer". Edit the "IMGCMD" variable
+# to change this.
+#
+# WARNING: It is assumed that the conkys are not being run via a script, so
+# they will appear on all desktops. If you usually use a script, then you
+# may have to make your own arrangements! Conkys in non-default directories
+# can be saved, but will not be seen when running the bl conky chooser
 #
 ########################################################################
 #
@@ -44,9 +47,6 @@
 # so the screenshot may produce an incorrect theme displayed and/or poor positioning.
 # A workaround is to move the cursor to some free space, and use the "Enter" key in the
 # "Configurations to be saved:" dialog.
-#
-# TODO:
-# Deal with per-desktop conky situations;
 #
 #### VARIABLES #########################################################
 CONFIGPATH="$HOME/.config/blob"
@@ -506,7 +506,7 @@ function getScrot(){
     screenW=$(xrandr -q | awk '/Screen/ {print $8}')
     screenH=$(xrandr -q | awk '/Screen/ {print $10}')
     screenH=${screenH%,}
-    
+
     if (( $MONS == 1 ));then # single monitor
         appX=$(( (screenW/20)*8 ))
         menuX=$(( (screenW/20)*2 ))
@@ -533,8 +533,8 @@ function getScrot(){
     xdotool mousemove --sync --window $LX -- -50 0 && xdotool click 1
     xdotool mousemove --sync $menuX $menuY && xdotool key --clearmodifiers "super+space"
     i=1
-    while (( $i <= $KEYDOWN ));do 
-        xdotool key --delay 30 Down 
+    while (( $i <= $KEYDOWN ));do
+        xdotool key --delay 30 Down
         i=$(( $i+1 ))
     done
     xdotool key --delay 20 Right && sleep 0.3
