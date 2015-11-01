@@ -371,13 +371,12 @@ function getConky(){
         echo "[CONKY] $CONKYCMD" >> "$SETTINGS"
         rm -f "$CONKYTEMP"
         echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
+        echo -e "\n  Saved running Conky(s)"
     else
-        $DIALOG --form --image="dialog-warning" \
+        DLG=$($DIALOG --form --image="dialog-warning" \
         --text="You selected to save Conkys\nbut none are running" \
         "$OK" \
-        --width=300 \
-        2>/dev/null
-        cleanup save
+        --width=300) 2>/dev/null
     fi
 }
 
@@ -415,6 +414,7 @@ function getTint(){
     echo "[TINT2] $TINTCMD" >> "$SETTINGS"
     rm -f "$TEMPTINT"
     echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
+    echo -e "\n  Saved running Tint2(s)"
 }
 
 function killTints(){
@@ -681,11 +681,8 @@ function cleanup(){
             echo -e "\n  Cancelled\n..Temporary $CONFIGDIR restored\n"
         fi
         rm -f /tmp/blob.*
-    fi
-    if [[ $1 = save ]];then
+    elif [[ $1 = save ]];then
         saveSettings
-    else
-        Intro
     fi
 }
 
@@ -763,7 +760,8 @@ function saveSettings(){
     TXT="<big><b><u>Openbox Configurations to be saved:</u></b></big>\n\n"
     TXT2=$(cat "$LISTMSG")
     NEW=$($DIALOG --text="$TXT$TXT2")
-    if (( $? == 1 ));then
+    ret=$?
+    if (( $ret == 1 ));then
         cleanup all
         restoreSettings
     else
