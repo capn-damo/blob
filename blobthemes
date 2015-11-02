@@ -390,31 +390,38 @@ function checkConkyzen(){    # see if bl-conkyzen and session file present
 
 function getTint(){
     TEMPTINT=$(mktemp --tmpdir blob.XXXX) # make blank tempfile, to save running tint2 paths
-    pgrep -a tint2 | while read pid cmd;do
-        if [[ ${cmd%% *} = tint2 ]];then
-            TPATH=$(echo "$cmd" | awk '{print $NF}')
-            echo "$TPATH;" >> "$TEMPTINT"
-        fi
-    done
-    TXT="Tint2s:\n\n"
-    MSG="Running Tint2s:"
-    TINTCMD=""
-    LISTMSGTXT=""
-    while read line;do
-        TXT="$TXT$line"
-        LINE=$(echo "$line" | sed 's/;//')
-        if [[ $LINE = tint2 ]];then         # default command was used
-            TINTCMD="$TINTCMD$LINE;"
-            LISTMSGTXT="$LISTMSGTXT\n\tDefault Tint2"
-        else
-            TINTCMD="$TINTCMD$LINE;"
-            LISTMSGTXT="$LISTMSGTXT\n\t$LINE"
-        fi
-    done < "$TEMPTINT"
-    echo "[TINT2] $TINTCMD" >> "$SETTINGS"
-    rm -f "$TEMPTINT"
-    echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
-    echo -e "\n  Saved running Tint2(s)"
+    if [[ $(pidof tint2) ]];then
+        pgrep -a tint2 | while read pid cmd;do
+            if [[ ${cmd%% *} = tint2 ]];then
+                TPATH=$(echo "$cmd" | awk '{print $NF}')
+                echo "$TPATH;" >> "$TEMPTINT"
+            fi
+        done
+        TXT="Tint2s:\n\n"
+        MSG="Running Tint2s:"
+        TINTCMD=""
+        LISTMSGTXT=""
+        while read line;do
+            TXT="$TXT$line"
+            LINE=$(echo "$line" | sed 's/;//')
+            if [[ $LINE = tint2 ]];then         # default command was used
+                TINTCMD="$TINTCMD$LINE;"
+                LISTMSGTXT="$LISTMSGTXT\n\tDefault Tint2"
+            else
+                TINTCMD="$TINTCMD$LINE;"
+                LISTMSGTXT="$LISTMSGTXT\n\t$LINE"
+            fi
+        done < "$TEMPTINT"
+        echo "[TINT2] $TINTCMD" >> "$SETTINGS"
+        rm -f "$TEMPTINT"
+        echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
+        echo -e "\n  Saved running Tint2(s)"
+    else
+        DLG=$($DIALOG --form --image="dialog-warning" \
+        --text="You selected to save Tint2\nbut none are running" \
+        "$OK" \
+        --width=300) 2>/dev/null
+    fi
 }
 
 function killTints(){
