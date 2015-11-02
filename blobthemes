@@ -768,8 +768,12 @@ function saveSettings(){
         "FALSE" "$PICKBG" \
         "FALSE" "$PICKDMENU" \
         "FALSE" "$PICKLDM" \
-        "FALSE" "$PICKTERM" \
         )
+    # add terminator to array if set as default
+    if  echo $(readlink -f /usr/bin/x-terminal-emulator ) | grep terminator &>/dev/null;then 
+        COLUMNS=("${COLUMNS[@]}" "FALSE" "$PICKTERM")
+    fi
+    
     SLOOP=1
     while (( $SLOOP == 1 ));do
         CHOICE=$($DIALOG --list --checklist --title \
