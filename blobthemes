@@ -374,13 +374,12 @@ function getConky(){
         echo "[CONKY] $CONKYCMD" >> "$SETTINGS"
         rm -f "$CONKYTEMP"
         echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
+        echo -e "\n  Saved running Conky(s)"
     else
-        $DIALOG --form --image="dialog-warning" \
+        DLG=$($DIALOG --form --image="dialog-warning" \
         --text="You selected to save Conkys\nbut none are running" \
         "$OK" \
-        --width=300 \
-        2>/dev/null
-        cleanup save
+        --width=300) 2>/dev/null
     fi
 }
 
@@ -394,30 +393,38 @@ function checkConkyzen(){    # see if bl-conkyzen and session file present
 
 function getTint(){
     TEMPTINT=$(mktemp --tmpdir blob.XXXX) # make blank tempfile, to save running tint2 paths
-    pgrep -a tint2 | while read pid cmd;do
-        if [[ ${cmd%% *} = tint2 ]];then
-            TPATH=$(echo "$cmd" | awk '{print $NF}')
-            echo "$TPATH;" >> "$TEMPTINT"
-        fi
-    done
-    TXT="Tint2s:\n\n"
-    MSG="Running Tint2s:"
-    TINTCMD=""
-    LISTMSGTXT=""
-    while read line;do
-        TXT="$TXT$line"
-        LINE=$(echo "$line" | sed 's/;//')
-        if [[ $LINE = tint2 ]];then         # default command was used
-            TINTCMD="$TINTCMD$LINE;"
-            LISTMSGTXT="$LISTMSGTXT\n\tDefault Tint2"
-        else
-            TINTCMD="$TINTCMD$LINE;"
-            LISTMSGTXT="$LISTMSGTXT\n\t$LINE"
-        fi
-    done < "$TEMPTINT"
-    echo "[TINT2] $TINTCMD" >> "$SETTINGS"
-    rm -f "$TEMPTINT"
-    echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
+    if [[ $(pidof tint2) ]];then
+        pgrep -a tint2 | while read pid cmd;do
+            if [[ ${cmd%% *} = tint2 ]];then
+                TPATH=$(echo "$cmd" | awk '{print $NF}')
+                echo "$TPATH;" >> "$TEMPTINT"
+            fi
+        done
+        TXT="Tint2s:\n\n"
+        MSG="Running Tint2s:"
+        TINTCMD=""
+        LISTMSGTXT=""
+        while read line;do
+            TXT="$TXT$line"
+            LINE=$(echo "$line" | sed 's/;//')
+            if [[ $LINE = tint2 ]];then         # default command was used
+                TINTCMD="$TINTCMD$LINE;"
+                LISTMSGTXT="$LISTMSGTXT\n\tDefault Tint2"
+            else
+                TINTCMD="$TINTCMD$LINE;"
+                LISTMSGTXT="$LISTMSGTXT\n\t$LINE"
+            fi
+        done < "$TEMPTINT"
+        echo "[TINT2] $TINTCMD" >> "$SETTINGS"
+        rm -f "$TEMPTINT"
+        echo "$MSG\t$LISTMSGTXT\n" >> "$LISTMSG"
+        echo -e "\n  Saved running Tint2(s)"
+    else
+        DLG=$($DIALOG --form --image="dialog-warning" \
+        --text="You selected to save Tint2\nbut none are running" \
+        "$OK" \
+        --width=300) 2>/dev/null
+    fi
 }
 
 function killTints(){
@@ -509,6 +516,31 @@ function getTerminator(){
     fi
 }
 
+checkTint2(){   # kill or restart tint2s for screenshot, if necessary
+    if [[ $1 = stop ]];then
+        if ! cat "$SETTINGS" | grep "TINT2" &>/dev/null;then
+            tmpTINT=$(mktemp --tmpdir blob.XXXX) # make blank tempfile, to save running tint2 paths
+            if [[ $(pidof tint2) ]];then
+                pgrep -a tint2 | while read pid cmd;do
+                    if [[ ${cmd%% *} = tint2 ]];then
+                        echo $cmd >> "$tmpTINT"
+                    fi
+                done
+            fi
+            killTints
+        fi
+    fi
+    if [[ $1 = start ]];then
+        if [[ -f "$tmpTINT" ]] 2>/dev/null;then
+            while read line;do
+                ($line &) &>/dev/null
+                sleep 1s
+            done < "$tmpTINT"
+            rm -f "$tmpTINT"
+        fi
+    fi
+}
+
 function getScrot(){
     pid=""
     TMPSCROT=$(mktemp --tmpdir blob.XXXX)
@@ -532,10 +564,16 @@ function getScrot(){
 
     wmctrl -l -x > "$TMPSCROT"      # store window list in tempfile
     wmctrl -k on                    # hide windows, show desktop
-    # show any conkys which have been hidden by wmctrl, (ie not own_window_type desktop)
-    for CONK in $(xdotool search --classname "Conky");do
-        xdotool windowactivate "$CONK"
-    done
+    # show any conkys which have been hidden by wmctrl, (ie not own_window_type desktop);
+    # unless Conkys weren't selected to be saved
+    if cat "$SETTINGS" | grep "CONKY" &>/dev/null;then
+        for CONK in $(xdotool search --classname "Conky");do
+            xdotool windowactivate "$CONK"
+        done
+    fi
+    checkTint2 stop     # stop running Tint2s for the scrot,
+                        # if not selected to be saved
+
     # start lxappearance
     lxappearance &
     pid=$!
@@ -545,22 +583,26 @@ function getScrot(){
     xdotool windowmove --sync $LX $appX $appY && sleep 0.1 && \
     xdotool mousemove --sync --window $LX -- -50 0 && xdotool click 1
     xdotool mousemove --sync $menuX $menuY && xdotool key --clearmodifiers "super+space"
+
     i=1
     while (( $i <= $KEYDOWN ));do
         xdotool key --delay 30 Down
         i=$(( $i+1 ))
     done
     xdotool key --delay 20 Right && sleep 0.3
+
     # take scrot
     scrot -t 9 "$SCROT.jpg"    # scrot thumbnail @9% fullsize
     THUMB=$(find $CONFIGPATH -maxdepth 1 -type f -name "*-thumb.jpg" 2>/dev/null)
     mv $THUMB $CONFIGDIR
+
     # close root menu
     xdotool mousemove_relative --sync --polar 0 10 click 3
     # kill lxappearance
     if [[ $(pgrep lxappearance | grep $pid) ]];then
         kill -9 $pid &>/dev/null
     fi
+
     # restore hidden windows
     while read line; do
         WINDOW=$(echo $line | awk '{print $1}') # Window_ID is first field
@@ -569,6 +611,11 @@ function getScrot(){
             xdotool windowactivate "$WINDOW"
         fi
     done < "$TMPSCROT"
+    # restore any hidden Conkys
+    for CONK in $(xdotool search --classname "Conky");do
+        xdotool windowactivate "$CONK"
+    done
+    checkTint2 start        # restore any stopped Tint2s
     rm -f "$TMPSCROT"
 }
 
@@ -707,11 +754,8 @@ function cleanup(){
             echo -e "\n  Cancelled\n..Temporary $CONFIGDIR restored\n"
         fi
         rm -f /tmp/blob.*
-    fi
-    if [[ $1 = save ]];then
+    elif [[ $1 = save ]];then
         saveSettings
-    else
-        Intro
     fi
 }
 
@@ -792,7 +836,8 @@ function saveSettings(){
     TXT="<big><b><u>Openbox Configurations to be saved:</u></b></big>\n\n"
     TXT2=$(cat "$LISTMSG")
     NEW=$($DIALOG --text="$TXT$TXT2")
-    if (( $? == 1 ));then
+    ret=$?
+    if (( $ret == 1 ));then
         cleanup all
         restoreSettings
     else
