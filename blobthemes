@@ -753,6 +753,7 @@ function saveSettings(){
             2>/dev/null )
         if (( $? == 1 )); then # cancel button pressed
             cleanup all
+            restoreSettings
         else
             if [[ ! $CHOICE ]] ; then # entry field is empty, so try again
                 RET=$($DIALOG  --image="dialog-question" \
