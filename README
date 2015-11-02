@@ -4,7 +4,7 @@ README
 
 blobthemes: script to save or restore openbox gui configurations
 
-(Requires yad, wmctrl, xdotool, xrandr, nitrogen|feh)
+(Requires yad, wmctrl, xdotool, xrandr, nitrogen|feh, scrot)
 
 Save options are for  Conky(s)
                       Tint2(s)
