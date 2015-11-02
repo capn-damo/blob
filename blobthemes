@@ -14,6 +14,7 @@
 #                                   has the newer saved bg config file)
 #                       Alt Menu (dmenu)
 #                       Lightdm login gtk greeter
+#                       Terminator config
 #
 # Paths are assumed to be BunsenLabs defaults
 #
@@ -85,7 +86,7 @@ PICKBG="Background Wallpaper"
 PICKDMENU="dmenu (Alt menu)"
 PICKLDM="Lightdm Login theme"
 PICKSCROT="Save screenshot"
-PICKTERM="Terminator config"
+PICKTERM="Terminator"
 ### END CONFIGS VARIABLES
 
 ### DIALOG VARIABLES
