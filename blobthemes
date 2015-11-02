@@ -503,6 +503,31 @@ function getLightdm(){
     fi
 }
 
+checkTint2(){   # kill or restart tint2s for screenshot, if necessary
+    if [[ $1 = stop ]];then
+        if ! cat "$SETTINGS" | grep "TINT2" &>/dev/null;then
+            tmpTINT=$(mktemp --tmpdir blob.XXXX) # make blank tempfile, to save running tint2 paths
+            if [[ $(pidof tint2) ]];then
+                pgrep -a tint2 | while read pid cmd;do
+                    if [[ ${cmd%% *} = tint2 ]];then
+                        echo $cmd >> "$tmpTINT"
+                    fi
+                done
+            fi
+            killTints
+        fi
+    fi
+    if [[ $1 = start ]];then
+        if [[ -f "$tmpTINT" ]] 2>/dev/null;then
+            while read line;do
+                ($line &) &>/dev/null
+                sleep 1s
+            done < "$tmpTINT"
+            rm -f "$tmpTINT"
+        fi
+    fi
+}
+
 function getScrot(){
     pid=""
     TMPSCROT=$(mktemp --tmpdir blob.XXXX)
@@ -526,10 +551,16 @@ function getScrot(){
 
     wmctrl -l -x > "$TMPSCROT"      # store window list in tempfile
     wmctrl -k on                    # hide windows, show desktop
-    # show any conkys which have been hidden by wmctrl, (ie not own_window_type desktop)
-    for CONK in $(xdotool search --classname "Conky");do
-        xdotool windowactivate "$CONK"
-    done
+    # show any conkys which have been hidden by wmctrl, (ie not own_window_type desktop);
+    # unless Conkys weren't selected to be saved
+    if cat "$SETTINGS" | grep "CONKY" &>/dev/null;then
+        for CONK in $(xdotool search --classname "Conky");do
+            xdotool windowactivate "$CONK"
+        done
+    fi
+    checkTint2 stop     # stop running Tint2s for the scrot,
+                        # if not selected to be saved
+
     # start lxappearance
     lxappearance &
     pid=$!
@@ -539,22 +570,26 @@ function getScrot(){
     xdotool windowmove --sync $LX $appX $appY && sleep 0.1 && \
     xdotool mousemove --sync --window $LX -- -50 0 && xdotool click 1
     xdotool mousemove --sync $menuX $menuY && xdotool key --clearmodifiers "super+space"
+
     i=1
     while (( $i <= $KEYDOWN ));do
         xdotool key --delay 30 Down
         i=$(( $i+1 ))
     done
     xdotool key --delay 20 Right && sleep 0.3
+
     # take scrot
     scrot -t 9 "$SCROT.jpg"    # scrot thumbnail @9% fullsize
     THUMB=$(find $CONFIGPATH -maxdepth 1 -type f -name "*-thumb.jpg" 2>/dev/null)
     mv $THUMB $CONFIGDIR
+
     # close root menu
     xdotool mousemove_relative --sync --polar 0 10 click 3
     # kill lxappearance
     if [[ $(pgrep lxappearance | grep $pid) ]];then
         kill -9 $pid &>/dev/null
     fi
+
     # restore hidden windows
     while read line; do
         WINDOW=$(echo $line | awk '{print $1}') # Window_ID is first field
@@ -563,6 +598,11 @@ function getScrot(){
             xdotool windowactivate "$WINDOW"
         fi
     done < "$TMPSCROT"
+    # restore any hidden Conkys
+    for CONK in $(xdotool search --classname "Conky");do
+        xdotool windowactivate "$CONK"
+    done
+    checkTint2 start        # restore any stopped Tint2s
     rm -f "$TMPSCROT"
 }
 
