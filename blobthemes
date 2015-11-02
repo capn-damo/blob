@@ -503,7 +503,7 @@ function getLightdm(){
     fi
 }
 
-checkTint2(){   # kill or restart tint2s for screenshot, if necessary
+function checkTint2(){   # kill or restart tint2s for screenshot, if necessary
     if [[ $1 = stop ]];then
         if ! cat "$SETTINGS" | grep "TINT2" &>/dev/null;then
             tmpTINT=$(mktemp --tmpdir blob.XXXX) # make blank tempfile, to save running tint2 paths
