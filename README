@@ -46,6 +46,3 @@ in the root-menu (or anything else you might want displayed).
 # A workaround is to move the cursor to some free space, and use the "Enter" key in the
 # "Configurations to be saved:" dialog.
 #
-# TODO:
-# Deal with per-desktop conky situations;
-
