@@ -569,12 +569,11 @@ function getScrot(){
     # unless Conkys weren't selected to be saved
     if cat "$SETTINGS" | grep "CONKY" &>/dev/null;then
         for CONK in $(xdotool search --classname "Conky");do
-            xdotool windowactivate "$CONK"
+            xdotool windowactivate "$CONK" 2>/dev/null
         done
     fi
     checkTint2 stop     # stop running Tint2s for the scrot,
                         # if not selected to be saved
-
     # start lxappearance
     lxappearance &
     pid=$!
@@ -614,7 +613,7 @@ function getScrot(){
     done < "$TMPSCROT"
     # restore any hidden Conkys
     for CONK in $(xdotool search --classname "Conky");do
-        xdotool windowactivate "$CONK"
+        xdotool windowactivate "$CONK" 2>/dev/null
     done
     checkTint2 start        # restore any stopped Tint2s
     rm -f "$TMPSCROT"
@@ -1020,7 +1019,7 @@ function restoreSettings(){
                                 ;;
             "[BACKGROUND]"  )   if [[ $VAL = FEH ]];then
                                     cp "$FPATH/.fehbg" "$HOME"
-                                    eval $(cat ~/.fehbg)
+                                    source "$HOME/.fehbg"
                                 else
                                     cp "$FPATH/bg-saved.cfg" "$NITRODIR"
                                     nitrogen --restore
