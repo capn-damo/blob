@@ -717,7 +717,7 @@ function restoreLightdm(){   # need sudo to restore lightdm-gtk-greeter.conf
     done
 }
 
-restoreTerminator(){
+function restoreTerminator(){
     TFILE="$1"
     if [[ -e $TERMDIR ]];then        # backup terminator/config first
         TERMBKP="$TERMDIR/config.bkp"
