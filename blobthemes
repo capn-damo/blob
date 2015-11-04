@@ -60,6 +60,7 @@ CZEN=0
 TZEN=0
 NUMDIRS=0
 CONKYCMD=""
+COLS=0
 ### CONFIGS VARIABLES
 TERMDIR="$HOME/.config/terminator"
 TERMFILE="$TERMDIR/config"
@@ -760,31 +761,45 @@ function cleanup(){
 }
 
 function saveSettings(){
+    SHOW=0
+    if (( $COLS == 0 ));then
+        SELECT="FALSE"
+    else
+        SELECT="TRUE"
+    fi
+
     COLUMNS=(\
-        "FALSE" "$PICKOB" \
-        "FALSE" "$PICKGTK" \
-        "FALSE" "$PICKCONKY" \
-        "FALSE" "$PICKTINT" \
-        "FALSE" "$PICKBG" \
-        "FALSE" "$PICKDMENU" \
-        "FALSE" "$PICKLDM" \
+        $SELECT "$PICKOB" \
+        $SELECT "$PICKGTK" \
+        $SELECT "$PICKCONKY" \
+        $SELECT "$PICKTINT" \
+        $SELECT "$PICKBG" \
+        $SELECT "$PICKDMENU" \
+        $SELECT "$PICKLDM" \
         )
     # add terminator to array if set as default
     if  echo $(readlink -f /usr/bin/x-terminal-emulator ) | grep terminator &>/dev/null;then 
-        COLUMNS=("${COLUMNS[@]}" "FALSE" "$PICKTERM")
+        COLUMNS=("${COLUMNS[@]}" $SELECT "$PICKTERM")
     fi
     
     SLOOP=1
     while (( $SLOOP == 1 ));do
         CHOICE=$($DIALOG --list --checklist --title \
             --text="Choose the configs you want to save..." \
+            --button="Save All:2" \
             $CANCEL $OK \
             --width=340 --height=340 \
             --column="Select" --column="Config" "${COLUMNS[@]}" \
             2>/dev/null )
-        if (( $? == 1 )); then # cancel button pressed
+            ret=$?
+        if (( $ret == 1 )); then # cancel button pressed
+            COLS=0
             cleanup all
             restoreSettings
+        elif (( $ret == 2 ));then
+            COLS=1
+            saveSettings
+            SHOW=1
         else
             if [[ ! $CHOICE ]] ; then # entry field is empty, so try again
                 RET=$($DIALOG  --image="dialog-question" \
@@ -838,15 +853,18 @@ function saveSettings(){
             fi
         fi
     done
-    TXT="<big><b><u>Openbox Configurations to be saved:</u></b></big>\n\n"
-    TXT2=$(cat "$LISTMSG")
-    NEW=$($DIALOG --text="$TXT$TXT2")
-    ret=$?
-    if (( $ret == 1 ));then
-        cleanup all
-        restoreSettings
-    else
-        echo "$ANS" > "$CURSESSION"     # replace entry in saved config flag file
+    if (( $SHOW == 0 ));then
+        COLS=0      # reset columns unselected
+        TXT="<big><b><u>Openbox Configurations to be saved:</u></b></big>\n\n"
+        TXT2=$(cat "$LISTMSG")
+        NEW=$($DIALOG --text="$TXT$TXT2")
+        ret=$?
+        if (( $ret == 1 ));then
+            cleanup all
+            restoreSettings
+        else
+            echo "$ANS" > "$CURSESSION"     # replace entry in saved config flag file
+        fi
     fi
 }
 
