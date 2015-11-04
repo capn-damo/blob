@@ -820,7 +820,7 @@ function saveSettings(){
     while (( $SLOOP == 1 ));do
         CHOICE=$($DIALOG --list --checklist --title \
             --text="Choose the configs you want to save..." \
-            --button="Save All:2" \
+            --button="Select All:2" \
             $CANCEL $OK \
             --width=340 --height=340 \
             --column="Select" --column="Config" "${COLUMNS[@]}" \
