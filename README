@@ -15,6 +15,7 @@ Save options are for  Conky(s)
                       Alt Menu (dmenu)
                       Lightdm login gtk greeter
                       Terminator config
+                      X colors (.bashrc & .Xresources)
 
 Paths are assumed to be BunsenLabs defaults.
 
