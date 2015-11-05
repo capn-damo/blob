@@ -800,7 +800,6 @@ function saveSettings(){
     else
         SELECT="TRUE"
     fi
-
     COLUMNS=(\
         $SELECT "$PICKOB" \
         $SELECT "$PICKGTK" \
@@ -812,10 +811,10 @@ function saveSettings(){
         $SELECT "$PICKX" \
         )
     # add terminator to array if set as default
-    if  echo $(readlink -f /usr/bin/x-terminal-emulator ) | grep terminator &>/dev/null;then 
+    if  echo $(readlink -f /usr/bin/x-terminal-emulator ) | grep terminator &>/dev/null;then
         COLUMNS=("${COLUMNS[@]}" $SELECT "$PICKTERM")
     fi
-    
+
     SLOOP=1
     while (( $SLOOP == 1 ));do
         CHOICE=$($DIALOG --list --checklist --title \
@@ -893,7 +892,7 @@ function saveSettings(){
         COLS=0      # reset columns unselected
         TXT="<big><b><u>Openbox Configurations to be saved:</u></b></big>\n\n"
         TXT2=$(cat "$LISTMSG")
-        NEW=$($DIALOG --text="$TXT$TXT2")
+        NEW=$($DIALOG --text="$TXT$TXT2") 2>/dev/null
         ret=$?
         if (( $ret == 1 ));then
             cleanup all
@@ -982,8 +981,8 @@ function restoreSettings(){
                 ;;
             1)  exit 0
                 ;;
-            2)   if [[ ! $CONFIG ]];then
-                    $DIALOG --text="Make a selection before trying to delete" "$EXIT" "$OK"
+            2)  if [[ ! $CONFIG ]];then
+                    $DIALOG --text="Make a selection before trying to delete" "$EXIT" "$OK" 2>/dev/null
                     if (( $? == 0 ));then
                         continue
                     else
@@ -1010,7 +1009,7 @@ function restoreSettings(){
             3)  setName
                 saveSettings
                 getScrot
-                $DIALOG --text="Settings were saved as <b>$ANS</b>" --image="gtk-save" "$OK"
+                $DIALOG --text="Settings were saved as <b>$ANS</b>" --image="gtk-save" "$OK" 2>/dev/null
                 if [[ -d $CONFIGDIR-BKP ]];then
                     rm -rf "$CONFIGDIR-BKP"
                     echo -e "\n  Temporary $CONFIGDIR deleted\n"
@@ -1023,7 +1022,7 @@ function restoreSettings(){
                     IMG="$CONFIGPATH/$SEL.jpg"
                     $IMGCMD "$IMG"
                 else
-                    $DIALOG --text="Make a selection"
+                    $DIALOG --text="Make a selection" 2>/dev/null
                 fi
                 restoreSettings
                 ;;
